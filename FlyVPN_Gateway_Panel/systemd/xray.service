@@ -1,0 +1,13 @@
+[Unit]
+Description=Xray FlyVPN Gateway
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/xray run -config /etc/flyvpn/xray/config.json
+Restart=always
+RestartSec=3
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,156 @@
+{
+  "dns": {
+    "queryStrategy": "UseIPv4",
+    "servers": [
+      "https://8.8.8.8/dns-query",
+      "https://8.8.4.4/dns-query",
+      "https://1.1.1.1/dns-query",
+      "https://1.0.0.1/dns-query"
+    ],
+    "tag": "dns-inbound"
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 10808,
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "sniffing": {
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ],
+        "enabled": true,
+        "routeOnly": true
+      },
+      "tag": "socks"
+    },
+    {
+      "listen": "127.0.0.1",
+      "port": 10809,
+      "protocol": "http",
+      "settings": {
+        "allowTransparent": false
+      },
+      "sniffing": {
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ],
+        "enabled": true,
+        "routeOnly": true
+      },
+      "tag": "http"
+    }
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "meta": null,
+  "outbounds": [
+    {
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "funny1.oneok.name",
+            "port": 443,
+            "users": [
+              {
+                "encryption": "none",
+                "flow": "",
+                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "grpcSettings": {
+          "authority": "",
+          "mode": false,
+          "serviceName": "api.v1.StreamService"
+        },
+        "network": "grpc",
+        "realitySettings": {
+          "fingerprint": "firefox",
+          "publicKey": "w5fBwTRrvLjDfKKfYM88Lrh7DpwSVlhnCCyo4FxLUSo",
+          "serverName": "funny1.oneok.name",
+          "shortId": "096bb498"
+        },
+        "security": "reality"
+      },
+      "tag": "proxy"
+    },
+    {
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIP"
+      },
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    },
+    {
+      "protocol": "dns",
+      "tag": "dns-out"
+    }
+  ],
+  "remarks": "🇷🇺 Россия",
+  "routing": {
+    "domainMatcher": "hybrid",
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "outboundTag": "dns-out",
+        "port": 53,
+        "type": "field"
+      },
+      {
+        "domain": [
+          "geosite:torrent"
+        ],
+        "outboundTag": "block",
+        "type": "field"
+      },
+      {
+        "domain": [
+          "geosite:google-play",
+          "geosite:github",
+          "geosite:twitch-ads",
+          "geosite:youtube",
+          "geosite:telegram"
+        ],
+        "outboundTag": "proxy",
+        "type": "field"
+      },
+      {
+        "outboundTag": "block",
+        "protocol": [
+          "bittorrent"
+        ],
+        "type": "field"
+      },
+      {
+        "ip": [
+          "geoip:private",
+          "geoip:direct"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+        "network": "tcp,udp",
+        "outboundTag": "proxy",
+        "type": "field"
+      }
+    ]
+  }
+}

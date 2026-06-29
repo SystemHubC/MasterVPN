@@ -1,0 +1,13 @@
+{% extends 'base.html' %}{% block content %}
+<div class="top"><div><h1>Dashboard</h1><p>Единая панель для бота, пользователей и Xray Gateway.</p></div><form method="post" action="/xray/rebuild"><button class="primary">Пересобрать Xray</button></form></div>
+<div class="grid cards">
+  <div class="card"><span>Всего пользователей</span><b>{{ stats.users }}</b></div>
+  <div class="card"><span>Активные</span><b>{{ stats.active_users }}</b></div>
+  <div class="card"><span>Конфиги</span><b>{{ stats.upstreams }}</b></div>
+  <div class="card"><span>Включено стран</span><b>{{ stats.enabled_upstreams }}</b></div>
+</div>
+<div class="grid two">
+  <section class="panel"><h2>Последние пользователи</h2><table><tr><th>ID</th><th>Username</th><th>Срок</th><th>Статус</th></tr>{% for u in recent_users %}<tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.expires_at or '∞' }}</td><td><span class="badge {{ 'on' if u.active else 'off' }}">{{ 'ON' if u.active else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
+  <section class="panel"><h2>VPN-конфиги</h2><table><tr><th>Название</th><th>Proxy</th><th>Статус</th></tr>{% for up in upstreams %}<tr><td>{{ up.remark }}</td><td>{{ up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
+</div>
+{% endblock %}

@@ -1,0 +1,400 @@
+{
+    "burstObservatory": {
+        "pingConfig": {
+            "connectivity": "http://connectivitycheck.gstatic.com/generate_204",
+            "destination": "http://connectivitycheck.gstatic.com/generate_204",
+            "interval": "1m",
+            "sampling": 3,
+            "timeout": "5s"
+        },
+        "subjectSelector": [
+            "proxy"
+        ]
+    },
+    "dns": {
+        "queryStrategy": "UseIPv4",
+        "servers": [
+            "https://8.8.8.8/dns-query",
+            "https://8.8.4.4/dns-query",
+            "https://1.1.1.1/dns-query",
+            "https://1.0.0.1/dns-query"
+        ],
+        "tag": "dns-inbound"
+    },
+    "inbounds": [
+        {
+            "listen": "127.0.0.1",
+            "port": 10808,
+            "protocol": "socks",
+            "settings": {
+                "auth": "noauth",
+                "udp": true,
+                "userLevel": 8
+            },
+            "sniffing": {
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "enabled": true,
+                "routeOnly": true
+            },
+            "tag": "socks"
+        },
+        {
+            "listen": "127.0.0.1",
+            "port": 10809,
+            "protocol": "http",
+            "settings": {
+                "allowTransparent": false,
+                "userLevel": 8
+            },
+            "sniffing": {
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "enabled": true,
+                "routeOnly": true
+            },
+            "tag": "http"
+        }
+    ],
+    "log": {
+        "loglevel": "warning"
+    },
+    "meta": null,
+    "outbounds": [
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "live.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "_4x6mU7USpNESoYSD2qzwA2pdvq8f30m0UwALXAqqzY",
+                    "serverName": "live.on3ok.com",
+                    "shortId": "5877634632cd9b75"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "cloud.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "shReJB9qcFJwR2jR0CElV3nrLVsxbi6DCQhA2nBLN3Q",
+                    "serverName": "cloud.on3ok.com",
+                    "shortId": "d1a124bd123d6fd6"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-2"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "gw.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "XbCXzBE48Mm7ONAj1u_J_dTAoszEXmrUJ_LXi81auCM",
+                    "serverName": "gw.on3ok.com",
+                    "shortId": "fa020441e9eb7b6b"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-3"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "mt.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "7Zaue_FAq70awc0df3pE7lIjaf7BcGjF5z43kbnjaHw",
+                    "serverName": "mt.on3ok.com",
+                    "shortId": "c85a9a8c2c3e8dbb"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-4"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "sync.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "2j9MbL9p_z1tmhfAOg8yJttmipPiG4IobC-RWYHkomM",
+                    "serverName": "sync.on3ok.com",
+                    "shortId": "57b9dece2c7ebfcf"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-5"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "fetch.on3ok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "54GDnm7DNlMJG9xRV1we7qiEGN7Q4O5VgkILnTEoOXc",
+                    "serverName": "fetch.on3ok.com",
+                    "shortId": "3c6224dbf85d9eb4"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-6"
+        },
+        {
+            "protocol": "freedom",
+            "settings": {
+                "domainStrategy": "UseIP"
+            },
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
+        },
+        {
+            "protocol": "dns",
+            "tag": "dns-out"
+        }
+    ],
+    "policy": {
+        "levels": {
+            "8": {
+                "connIdle": 300,
+                "downlinkOnly": 1,
+                "handshake": 4,
+                "uplinkOnly": 1
+            }
+        },
+        "system": {
+            "statsOutboundDownlink": true,
+            "statsOutboundUplink": true
+        }
+    },
+    "remarks": "🇸🇪 Швеция ",
+    "routing": {
+        "balancers": [
+            {
+                "fallbackTag": "proxy",
+                "selector": [
+                    "proxy"
+                ],
+                "strategy": {
+                    "settings": {
+                        "baselines": [
+                            "400ms",
+                            "800ms"
+                        ],
+                        "expected": 1,
+                        "maxRTT": "3s",
+                        "tolerance": 0.25
+                    },
+                    "type": "leastLoad"
+                },
+                "tag": "balancer"
+            }
+        ],
+        "domainMatcher": "hybrid",
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "outboundTag": "dns-out",
+                "port": 53,
+                "type": "field"
+            },
+            {
+                "domain": [
+                    "geosite:TORRENT"
+                ],
+                "outboundTag": "block",
+                "ruleTag": "TORRENT_BY_DOMAIN"
+            },
+            {
+                "outboundTag": "block",
+                "port": "6881-6889,51413,21413,17417,37305",
+                "ruleTag": "TORRENT_BY_PORT"
+            },
+            {
+                "balancerTag": "balancer",
+                "domain": [
+                    "geosite:google-play",
+                    "geosite:github",
+                    "geosite:twitch-ads",
+                    "geosite:youtube",
+                    "geosite:telegram"
+                ],
+                "type": "field"
+            },
+            {
+                "domain": [
+                    "geosite:private",
+                    "geosite:category-ru",
+                    "geosite:whitelist",
+                    "geosite:microsoft",
+                    "geosite:apple",
+                    "geosite:epicgames",
+                    "geosite:riot",
+                    "geosite:escapefromtarkov",
+                    "geosite:steam",
+                    "geosite:twitch",
+                    "geosite:pinterest",
+                    "geosite:faceit"
+                ],
+                "outboundTag": "direct",
+                "type": "field"
+            },
+            {
+                "outboundTag": "block",
+                "protocol": [
+                    "bittorrent"
+                ],
+                "type": "field"
+            },
+            {
+                "ip": [
+                    "geoip:private",
+                    "geoip:direct"
+                ],
+                "outboundTag": "direct",
+                "type": "field"
+            },
+            {
+                "balancerTag": "balancer",
+                "network": "tcp,udp",
+                "type": "field"
+            }
+        ]
+    },
+    "stats": {
+    }
+}

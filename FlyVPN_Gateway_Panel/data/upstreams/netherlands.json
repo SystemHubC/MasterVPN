@@ -1,0 +1,400 @@
+{
+    "burstObservatory": {
+        "pingConfig": {
+            "connectivity": "http://connectivitycheck.gstatic.com/generate_204",
+            "destination": "http://connectivitycheck.gstatic.com/generate_204",
+            "interval": "1m",
+            "sampling": 3,
+            "timeout": "5s"
+        },
+        "subjectSelector": [
+            "proxy"
+        ]
+    },
+    "dns": {
+        "queryStrategy": "UseIPv4",
+        "servers": [
+            "https://8.8.8.8/dns-query",
+            "https://8.8.4.4/dns-query",
+            "https://1.1.1.1/dns-query",
+            "https://1.0.0.1/dns-query"
+        ],
+        "tag": "dns-inbound"
+    },
+    "inbounds": [
+        {
+            "listen": "127.0.0.1",
+            "port": 10808,
+            "protocol": "socks",
+            "settings": {
+                "auth": "noauth",
+                "udp": true,
+                "userLevel": 8
+            },
+            "sniffing": {
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "enabled": true,
+                "routeOnly": true
+            },
+            "tag": "socks"
+        },
+        {
+            "listen": "127.0.0.1",
+            "port": 10809,
+            "protocol": "http",
+            "settings": {
+                "allowTransparent": false,
+                "userLevel": 8
+            },
+            "sniffing": {
+                "destOverride": [
+                    "http",
+                    "tls",
+                    "quic"
+                ],
+                "enabled": true,
+                "routeOnly": true
+            },
+            "tag": "http"
+        }
+    ],
+    "log": {
+        "loglevel": "warning"
+    },
+    "meta": null,
+    "outbounds": [
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "fetch.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "djznridasJP_fyuK430Mp6YEuN572uhtDpx6v0fopGk",
+                    "serverName": "fetch.getoneok.com",
+                    "shortId": "9be6a99f9603dcdb"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "get.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "k3ipsZgQObLjNsW2_RrjzaIttgglYXovKeSPX55hWho",
+                    "serverName": "get.getoneok.com",
+                    "shortId": "4f4107b8579b9c79"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-2"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "app.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "OFHvCNoVCxj7ww3U7NKFgAQzsiLEyO5cardIfRsJQhc",
+                    "serverName": "app.getoneok.com",
+                    "shortId": "f56b35b0ce8fb8ff"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-3"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "io.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "mJELj4qcAUvJAKA795varIRTmaRqM3bTsFVvLawNP0g",
+                    "serverName": "io.getoneok.com",
+                    "shortId": "cf6feb0b4102ace8"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-4"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "net.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "k9Z7AXNFP635PURWcvYmjCI2i7CQBCwWkFdRSPbgbB0",
+                    "serverName": "net.getoneok.com",
+                    "shortId": "9e3c8727870f7f89"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-5"
+        },
+        {
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "node.getoneok.com",
+                        "port": 443,
+                        "users": [
+                            {
+                                "encryption": "none",
+                                "flow": "",
+                                "id": "2eb2cbca-31a6-4f6f-a239-f9374cf03d1d"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "grpcSettings": {
+                    "authority": "",
+                    "mode": false,
+                    "serviceName": "api.v1.StreamService"
+                },
+                "network": "grpc",
+                "realitySettings": {
+                    "fingerprint": "firefox",
+                    "publicKey": "7f5PBpayoq4N1a2b-ouoiw8Eja9fjBCxSH6cbju7lQA",
+                    "serverName": "node.getoneok.com",
+                    "shortId": "2d150df401cf744e"
+                },
+                "security": "reality"
+            },
+            "tag": "proxy-6"
+        },
+        {
+            "protocol": "freedom",
+            "settings": {
+                "domainStrategy": "UseIP"
+            },
+            "tag": "direct"
+        },
+        {
+            "protocol": "blackhole",
+            "tag": "block"
+        },
+        {
+            "protocol": "dns",
+            "tag": "dns-out"
+        }
+    ],
+    "policy": {
+        "levels": {
+            "8": {
+                "connIdle": 300,
+                "downlinkOnly": 1,
+                "handshake": 4,
+                "uplinkOnly": 1
+            }
+        },
+        "system": {
+            "statsOutboundDownlink": true,
+            "statsOutboundUplink": true
+        }
+    },
+    "remarks": "🇳🇱  Нидерланды ",
+    "routing": {
+        "balancers": [
+            {
+                "fallbackTag": "proxy",
+                "selector": [
+                    "proxy"
+                ],
+                "strategy": {
+                    "settings": {
+                        "baselines": [
+                            "400ms",
+                            "800ms"
+                        ],
+                        "expected": 1,
+                        "maxRTT": "3s",
+                        "tolerance": 0.25
+                    },
+                    "type": "leastLoad"
+                },
+                "tag": "balancer"
+            }
+        ],
+        "domainMatcher": "hybrid",
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "outboundTag": "dns-out",
+                "port": 53,
+                "type": "field"
+            },
+            {
+                "domain": [
+                    "geosite:TORRENT"
+                ],
+                "outboundTag": "block",
+                "ruleTag": "TORRENT_BY_DOMAIN"
+            },
+            {
+                "outboundTag": "block",
+                "port": "6881-6889,51413,21413,17417,37305",
+                "ruleTag": "TORRENT_BY_PORT"
+            },
+            {
+                "balancerTag": "balancer",
+                "domain": [
+                    "geosite:google-play",
+                    "geosite:github",
+                    "geosite:twitch-ads",
+                    "geosite:youtube",
+                    "geosite:telegram"
+                ],
+                "type": "field"
+            },
+            {
+                "domain": [
+                    "geosite:private",
+                    "geosite:category-ru",
+                    "geosite:whitelist",
+                    "geosite:microsoft",
+                    "geosite:apple",
+                    "geosite:epicgames",
+                    "geosite:riot",
+                    "geosite:escapefromtarkov",
+                    "geosite:steam",
+                    "geosite:twitch",
+                    "geosite:pinterest",
+                    "geosite:faceit"
+                ],
+                "outboundTag": "direct",
+                "type": "field"
+            },
+            {
+                "outboundTag": "block",
+                "protocol": [
+                    "bittorrent"
+                ],
+                "type": "field"
+            },
+            {
+                "ip": [
+                    "geoip:private",
+                    "geoip:direct"
+                ],
+                "outboundTag": "direct",
+                "type": "field"
+            },
+            {
+                "balancerTag": "balancer",
+                "network": "tcp,udp",
+                "type": "field"
+            }
+        ]
+    },
+    "stats": {
+    }
+}

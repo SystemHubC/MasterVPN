@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or 'FlyVPN Gateway' }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="logo">🪽</div><div><b>FlyVPN</b><span>Gateway Panel</span></div></div>
+      <nav>
+        <a href="/">⌁ Dashboard</a>
+        <a href="/users">👥 Пользователи</a>
+        <a href="/upstreams">🌍 VPN-конфиги</a>
+        <a href="/xray">⚙️ Xray</a>
+        <a href="/settings">🔧 Настройки</a>
+        <a href="/logout">⎋ Выйти</a>
+      </nav>
+      <div class="hint">Клиент → FlyVPN → upstream JSON. Пользователь видит только твою ссылку.</div>
+    </aside>
+    <main class="main">
+      {% if flash %}<div class="flash {{ flash.kind }}">{{ flash.text }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
