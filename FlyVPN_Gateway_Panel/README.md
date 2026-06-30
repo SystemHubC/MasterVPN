@@ -1,115 +1,64 @@
-# 🪽 FlyVPN Gateway Panel
+# FlyVPN Gateway Panel v3
 
-Красивая web-панель для схемы **клиент → твой Xray Gateway → импортированные JSON VPN-конфиги**.
-
-Она нужна именно для твоего сценария, когда есть готовые клиентские JSON-конфиги, но ты хочешь выдавать покупателям **свои ссылки** и управлять доступом по сроку.
-
-## Что умеет
-
-- Тёмная панель в стиле современных VPN-панелей.
-- Импорт готовых Happ/Xray JSON-конфигов.
-- Автоматически вытаскивает `outbounds` с `vless/vmess/trojan/shadowsocks`.
-- Генерирует серверный Xray config.
-- Создаёт отдельный UUID каждому клиенту.
-- Роутит каждого клиента в выбранную страну/upstream.
-- Выдаёт subscription URL `/sub/<token>` и JSON `/api/sub/<token>`.
-- Управление пользователями: срок, активность, страна, заметки.
-- Управление upstream-конфигами: включить/выключить/удалить.
-- Кнопки rebuild/validate/restart Xray.
-
-## Важная схема
+Собственная панель FlyVPN Gateway для схемы:
 
 ```text
-Happ пользователя
-  ↓ vless://USER_UUID@твой_vps:8443
-Твой Xray Gateway
-  ↓ upstream outbound из импортированного JSON
-Готовый VPN-сервер из конфига
+Покупатель -> твой VPS/Xray inbound -> импортированный Xray/Happ JSON upstream -> интернет
 ```
 
-Покупатель не видит upstream UUID и не получает твой исходный JSON.
+## Главное в v3
 
-## Быстрый запуск на VPS
+- Красивый тёмный интерфейс, вдохновлённый современными VPN-панелями, без копирования чужого кода.
+- Импорт чужих/партнёрских Happ/Xray JSON-конфигов как upstream-локаций. Используй только конфиги, на которые у тебя есть право.
+- Один клиент может получить все включённые локации сразу: подписка отдаёт несколько `vless://` строк.
+- Больше нет публичных `/users/1/sub`: клиентский URL только `/sub/<long_random_token>`. Token генерируется через `secrets.token_urlsafe(32)`.
+- Для каждой пары клиент+локация генерируется отдельный стабильный UUID, чтобы Xray маршрутизировал трафик в нужную страну.
+- `install.sh` сам ставит зависимости, чинит `.env`, ставит Xray, создаёт systemd-сервис и открывает порты.
+- В панели: Users, Locations, Xray Rebuild/Validate/Restart, Settings, secure token rotate.
+
+## Установка/обновление на VPS
 
 ```bash
-unzip FlyVPN_Gateway_Panel.zip
-cd FlyVPN_Gateway_Panel
-sudo bash install.sh
-```
-
-Открой:
-
-```text
-http://IP_СЕРВЕРА:8090
-```
-
-Логин и пароль находятся в `.env`:
-
-```env
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change_me
-```
-
-Поменяй пароль сразу.
-
-## Настройка
-
-В панели зайди в **Settings** и проверь:
-
-```text
-PUBLIC_HOST=IP или домен твоего VPS
-PUBLIC_PORT=8443
-XRAY_CONFIG_PATH=/etc/flyvpn/xray/config.json
-XRAY_SERVICE_NAME=xray
-```
-
-Потом зайди в **Xray → Записать config**.
-
-## Установка Xray
-
-Поставь xray-core любым нормальным способом. Если у тебя уже стоит `/usr/local/bin/xray`, можно использовать готовый service:
-
-```bash
-sudo cp systemd/xray.service /etc/systemd/system/xray.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now xray
-```
-
-Открой порт:
-
-```bash
-sudo ufw allow 8443/tcp
-sudo ufw allow 8443/udp
+cd /opt
+rm -rf /opt/MasterVPN
+git clone https://github.com/SystemHubC/MasterVPN.git /opt/MasterVPN
+cd /opt/MasterVPN/FlyVPN_Gateway_Panel
+bash install.sh
 ```
 
 Проверка:
 
 ```bash
-sudo systemctl status xray --no-pager -l
-sudo ss -lntup | grep 8443
+systemctl status flyvpn-panel --no-pager -l
+systemctl status xray --no-pager -l
+curl http://127.0.0.1:8090/api/health
+ss -lntup | grep -E '8090|8443'
 ```
 
-## Как пользоваться
+Открыть панель:
 
-1. **Upstreams** → импортируй JSON-конфиг страны.
-2. **Users** → создай клиента и выбери страну.
-3. **Xray** → Rebuild → Validate → Restart.
-4. Открой ссылку пользователя `/sub/<token>`.
-5. Импортируй её в Happ.
+```text
+http://SERVER_IP:8090
+```
 
-## Что уже добавлено
+Логин/пароль лежат в:
 
-В папке `data/upstreams` уже лежат твои конфиги:
+```text
+/opt/flyvpn-gateway-panel/.env
+```
 
-- Россия
-- Германия
-- Швеция
-- Нидерланды
-- Великобритания
-- Великобритания [2]
+## Как получить несколько локаций
 
-При первом запуске панель сама добавит их в SQLite.
+В Users при создании клиента выбери `🌐 Все локации`. Тогда `/sub/<token>` отдаст все включённые страны отдельными строками:
 
-## Ограничение
+```text
+vless://uuid1@SERVER_IP:8443?...#FlyVPN-Германия
+vless://uuid2@SERVER_IP:8443?...#FlyVPN-Швеция
+vless://uuid3@SERVER_IP:8443?...#FlyVPN-Нидерланды
+```
 
-Технически эта схема использует готовые upstream-конфиги. Используй только те конфиги/серверы, на которые у тебя есть право. Если upstream умрёт — соответствующая страна тоже перестанет работать.
+Если выбрать одну страну, подписка отдаст только её.
+
+## Важное ограничение
+
+Gateway mode проксирует трафик через твой VPS, а затем через импортированный upstream. Если upstream JSON умер, неверный, заблокирован или у тебя нет права им пользоваться, эта локация работать не будет.

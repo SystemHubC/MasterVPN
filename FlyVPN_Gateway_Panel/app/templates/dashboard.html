@@ -1,13 +1,25 @@
 {% extends 'base.html' %}{% block content %}
-<div class="top"><div><h1>Dashboard</h1><p>Единая панель для бота, пользователей и Xray Gateway.</p></div><form method="post" action="/xray/rebuild"><button class="primary">Пересобрать Xray</button></form></div>
-<div class="grid cards">
-  <div class="card"><span>Всего пользователей</span><b>{{ stats.users }}</b></div>
-  <div class="card"><span>Активные</span><b>{{ stats.active_users }}</b></div>
-  <div class="card"><span>Конфиги</span><b>{{ stats.upstreams }}</b></div>
-  <div class="card"><span>Включено стран</span><b>{{ stats.enabled_upstreams }}</b></div>
+<header class="hero">
+  <div>
+    <span class="eyebrow">FlyVPN Gateway</span>
+    <h1>Control Center</h1>
+    <p>Приватная gateway-панель: клиенты получают твой VPS и секретную подписку, а Xray маршрутизирует трафик через импортированные JSON-upstreams.</p>
+  </div>
+  <div class="hero-actions">
+    <form method="post" action="/xray/rebuild"><button>Rebuild config</button></form>
+    <form method="post" action="/xray/restart"><button class="primary">Restart Xray</button></form>
+  </div>
+</header>
+
+<div class="stat-grid">
+  <div class="stat"><span>Total users</span><b>{{ stats.users }}</b><em>в базе</em></div>
+  <div class="stat"><span>Active users</span><b>{{ stats.active_users }}</b><em>имеют доступ</em></div>
+  <div class="stat"><span>Locations</span><b>{{ stats.upstreams }}</b><em>JSON-конфиги</em></div>
+  <div class="stat"><span>Enabled</span><b>{{ stats.enabled_upstreams }}</b><em>доступные страны</em></div>
 </div>
+
 <div class="grid two">
-  <section class="panel"><h2>Последние пользователи</h2><table><tr><th>ID</th><th>Username</th><th>Срок</th><th>Статус</th></tr>{% for u in recent_users %}<tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.expires_at or '∞' }}</td><td><span class="badge {{ 'on' if u.active else 'off' }}">{{ 'ON' if u.active else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
-  <section class="panel"><h2>VPN-конфиги</h2><table><tr><th>Название</th><th>Proxy</th><th>Статус</th></tr>{% for up in upstreams %}<tr><td>{{ up.remark }}</td><td>{{ up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
+  <section class="panel"><div class="panel-head"><h2>Последние пользователи</h2><a href="/users">Открыть</a></div><table><tr><th>ID</th><th>Клиент</th><th>Дней</th><th>Статус</th></tr>{% for u in recent_users %}<tr><td>#{{ u.id }}</td><td><b>{{ u.username }}</b><br><small>{{ u.email }}</small></td><td>{{ days_left(u) }}</td><td><span class="badge {{ 'on' if u.active else 'off' }}">{{ 'ACTIVE' if u.active else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
+  <section class="panel"><div class="panel-head"><h2>Локации</h2><a href="/upstreams">Импорт</a></div><table><tr><th>Страна</th><th>Proxy</th><th>Статус</th></tr>{% for up in upstreams %}<tr><td><b>{{ up.remark }}</b><br><small>{{ up.name }}</small></td><td>{{ up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
 </div>
 {% endblock %}

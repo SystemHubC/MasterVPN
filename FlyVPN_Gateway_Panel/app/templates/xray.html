@@ -1,4 +1,4 @@
 {% extends 'base.html' %}{% block content %}
-<div class="top"><div><h1>Xray Gateway</h1><p>Генерируемый серверный конфиг. Клиент подключается к тебе, а сервер уходит в выбранный upstream.</p></div><div class="actions"><form method="post" action="/xray/rebuild"><button>Записать config</button></form><form method="post" action="/xray/validate"><button>Validate</button></form><form method="post" action="/xray/restart"><button class="primary">Restart Xray</button></form></div></div>
-<section class="panel"><h2>Generated config</h2><textarea class="code" rows="30" readonly>{{ cfg }}</textarea></section>
+<header class="hero compact"><div><span class="eyebrow">Core</span><h1>Xray Gateway</h1><p>Сначала Rebuild, потом Validate, потом Restart. Если Xray не установлен — запусти install.sh v2.</p></div><div class="hero-actions"><form method="post" action="/xray/rebuild"><button>Rebuild</button></form><form method="post" action="/xray/validate"><button>Validate</button></form><form method="post" action="/xray/restart"><button class="primary">Restart Xray</button></form></div></header>
+<section class="panel"><div class="panel-head"><h2>Generated config</h2><span>{{ setting('XRAY_CONFIG_PATH','/usr/local/etc/xray/config.json') }}</span></div><textarea class="code" rows="32" readonly>{{ cfg }}</textarea></section>
 {% endblock %}

@@ -7,23 +7,32 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="shell">
+  <div class="noise"></div>
+  <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><div class="logo">🪽</div><div><b>FlyVPN</b><span>Gateway Panel</span></div></div>
-      <nav>
-        <a href="/">⌁ Dashboard</a>
-        <a href="/users">👥 Пользователи</a>
-        <a href="/upstreams">🌍 VPN-конфиги</a>
-        <a href="/xray">⚙️ Xray</a>
-        <a href="/settings">🔧 Настройки</a>
-        <a href="/logout">⎋ Выйти</a>
+      <a class="brand" href="/">
+        <div class="brand-mark">🪽</div>
+        <div><b>FlyVPN</b><span>Gateway Control</span></div>
+      </a>
+      <nav class="nav">
+        <a href="/">⌁ <span>Dashboard</span></a>
+        <a href="/users">👥 <span>Users</span></a>
+        <a href="/upstreams">🌍 <span>Locations</span></a>
+        <a href="/xray">⚙️ <span>Xray Core</span></a>
+        <a href="/settings">🔧 <span>Settings</span></a>
       </nav>
-      <div class="hint">Клиент → FlyVPN → upstream JSON. Пользователь видит только твою ссылку.</div>
+      <div class="side-card">
+        <div class="pulse"></div>
+        <b>Gateway mode</b>
+        <p>Клиент видит только твой VPS, а Xray внутри уходит в выбранные JSON-upstreams.</p>
+      </div>
+      <a class="logout" href="/logout">⎋ Выйти</a>
     </aside>
     <main class="main">
-      {% if flash %}<div class="flash {{ flash.kind }}">{{ flash.text }}</div>{% endif %}
+      {% if flash %}<div class="toast {{ flash.kind }}">{{ flash.text }}</div>{% endif %}
       {% block content %}{% endblock %}
     </main>
   </div>
+<script src="/static/app.js"></script>
 </body>
 </html>

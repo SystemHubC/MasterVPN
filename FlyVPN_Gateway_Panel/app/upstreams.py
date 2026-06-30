@@ -52,12 +52,17 @@ def upstream_to_xray_objects(upstream_id: int, upstream_name: str, config: dict[
         cloned = copy.deepcopy(ob)
         tag = f"up-{upstream_id}-{safe_tag(str(ob.get('tag') or upstream_name))}-{index}"
         cloned["tag"] = tag
-        # Remove client-side-only sockopts that often break server-side gateway mode.
+
+        # Client JSON often has local-only sockopt/routing helpers. They can break server-side gateway mode.
         ss = cloned.get("streamSettings")
         if isinstance(ss, dict):
             sock = ss.get("sockopt")
             if isinstance(sock, dict):
                 sock.pop("dialerProxy", None)
+                sock.pop("interface", None)
+                sock.pop("mark", None)
+                if not sock:
+                    ss.pop("sockopt", None)
         outbounds.append(cloned)
         tags.append(tag)
     return outbounds, tags

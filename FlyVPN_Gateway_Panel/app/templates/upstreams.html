@@ -1,5 +1,25 @@
 {% extends 'base.html' %}{% block content %}
-<div class="top"><div><h1>VPN-конфиги / Upstreams</h1><p>Импортируй клиентские JSON. Панель вытащит proxy outbounds и направит через них клиентов.</p></div></div>
-<section class="panel"><h2>Импорт JSON</h2><form method="post" action="/upstreams/import" enctype="multipart/form-data"><div class="form-grid"><input name="name" placeholder="Название, например Германия"><input type="file" name="file" accept=".json"><button class="primary">Импортировать</button></div><textarea name="json_text" rows="8" placeholder="Или вставь JSON сюда"></textarea></form></section>
-<section class="panel"><h2>Импортированные страны</h2><table><tr><th>ID</th><th>Название</th><th>Proxy outbounds</th><th>Статус</th><th></th></tr>{% for up in upstreams %}<tr><td>{{ up.id }}</td><td><b>{{ up.remark }}</b><br><small>{{ up.name }}</small></td><td>{{ up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td><td><form method="post" action="/upstreams/{{ up.id }}/toggle" class="inline"><button>{{ 'Выключить' if up.enabled else 'Включить' }}</button></form><form method="post" action="/upstreams/{{ up.id }}/delete" class="inline" onsubmit="return confirm('Удалить конфиг?')"><button class="danger">Удалить</button></form></td></tr>{% endfor %}</table></section>
+<header class="hero compact"><div><span class="eyebrow">Upstreams</span><h1>VPN-локации</h1><p>Импортируй Happ/Xray JSON. Панель берёт только proxy outbounds и строит gateway-маршруты.</p></div></header>
+
+<section class="panel">
+  <div class="panel-head"><h2>Импорт JSON</h2><span class="pill ghost">vless / vmess / trojan / shadowsocks</span></div>
+  <form method="post" action="/upstreams/import" enctype="multipart/form-data">
+    <div class="form-grid import-grid"><input name="name" placeholder="Название, например Германия"><input type="file" name="file" accept=".json"><button class="primary">Импортировать</button></div>
+    <textarea name="json_text" rows="8" placeholder="Или вставь JSON сюда"></textarea>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Все страны</h2><span>{{ upstreams|length }} конфигов</span></div>
+  <div class="cards-list">
+  {% for up in upstreams %}
+    <article class="loc-card">
+      <div><b>{{ up.remark }}</b><span>{{ up.name }}</span></div>
+      <div><small>Proxy outbounds</small><strong>{{ up.proxy_count }}</strong></div>
+      <span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ENABLED' if up.enabled else 'DISABLED' }}</span>
+      <div class="row-actions"><form method="post" action="/upstreams/{{ up.id }}/toggle"><button>{{ 'Выключить' if up.enabled else 'Включить' }}</button></form><form method="post" action="/upstreams/{{ up.id }}/delete" onsubmit="return confirm('Удалить конфиг?')"><button class="danger">Удалить</button></form></div>
+    </article>
+  {% endfor %}
+  </div>
+</section>
 {% endblock %}

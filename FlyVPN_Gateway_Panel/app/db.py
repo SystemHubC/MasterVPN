@@ -34,6 +34,11 @@ def parse_iso(value: str | None) -> datetime | None:
         return None
 
 
+def new_token() -> str:
+    # ~43 chars, not guessable by brute force.
+    return secrets.token_urlsafe(32)
+
+
 @contextmanager
 def conn():
     c = sqlite3.connect(DB_PATH)
@@ -60,6 +65,10 @@ def execute(sql: str, params: Iterable[Any] = ()) -> int:
     with conn() as c:
         cur = c.execute(sql, tuple(params))
         return int(cur.lastrowid or 0)
+
+
+def _columns(c: sqlite3.Connection, table: str) -> set[str]:
+    return {str(r[1]) for r in c.execute(f"PRAGMA table_info({table})").fetchall()}
 
 
 def init_db() -> None:
@@ -112,6 +121,14 @@ def init_db() -> None:
             );
             """
         )
+
+        # Soft migrations for already installed versions.
+        user_cols = _columns(c, "users")
+        if "traffic_limit_gb" not in user_cols:
+            c.execute("ALTER TABLE users ADD COLUMN traffic_limit_gb INTEGER NOT NULL DEFAULT 0")
+        if "notes" not in user_cols:
+            c.execute("ALTER TABLE users ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+
         count = c.execute("SELECT COUNT(*) AS n FROM plans").fetchone()["n"]
         if count == 0:
             for name, days, price in [
@@ -125,6 +142,12 @@ def init_db() -> None:
                     (name, days, price),
                 )
 
+        # Upgrade short old tokens to long random subscription secrets.
+        for r in c.execute("SELECT id, sub_token FROM users").fetchall():
+            tok = str(r["sub_token"] or "")
+            if len(tok) < 32:
+                c.execute("UPDATE users SET sub_token=? WHERE id=?", (new_token(), r["id"]))
+
 
 def setting(key: str, default: str = "") -> str:
     r = row("SELECT value FROM settings WHERE key=?", (key,))
@@ -136,15 +159,21 @@ def set_setting(key: str, value: str) -> None:
 
 
 def make_user(username: str, upstream_id: int | None, days: int = 3, tg_id: int | None = None, notes: str = "") -> int:
-    u = str(uuid.uuid4())
-    email = f"flyvpn_{secrets.token_hex(4)}"
-    token = secrets.token_urlsafe(16)
+    base_uuid = str(uuid.uuid4())
+    email = f"flyvpn_{secrets.token_hex(5)}"
+    token = new_token()
     expires = iso(utcnow() + timedelta(days=days)) if days > 0 else None
     return execute(
         """INSERT INTO users(tg_id, username, email, uuid, sub_token, upstream_id, active, expires_at, notes, created_at)
              VALUES(?,?,?,?,?,?,1,?,?,?)""",
-        (tg_id, username, email, u, token, upstream_id, expires, notes, iso(utcnow())),
+        (tg_id, username, email, base_uuid, token, upstream_id, expires, notes, iso(utcnow())),
     )
+
+
+def rotate_sub_token(uid: int) -> str:
+    token = new_token()
+    execute("UPDATE users SET sub_token=? WHERE id=?", (token, uid))
+    return token
 
 
 def active_users() -> list[dict[str, Any]]:

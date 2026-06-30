@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/opt/flyvpn-gateway-panel
 EnvironmentFile=/opt/flyvpn-gateway-panel/.env
-ExecStart=/opt/flyvpn-gateway-panel/venv/bin/uvicorn app.main:app --host ${PANEL_HOST:-0.0.0.0} --port ${PANEL_PORT:-8090}
+ExecStart=/bin/bash -lc 'set -a; source /opt/flyvpn-gateway-panel/.env; set +a; exec /opt/flyvpn-gateway-panel/venv/bin/uvicorn app.main:app --host "${PANEL_HOST:-0.0.0.0}" --port "${PANEL_PORT:-8090}"'
 Restart=always
 RestartSec=5
 

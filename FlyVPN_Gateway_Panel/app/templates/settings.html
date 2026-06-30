@@ -1,7 +1,8 @@
 {% extends 'base.html' %}{% block content %}
-<div class="top"><div><h1>Настройки</h1><p>Адрес, который попадёт в Happ-ссылки, и путь к Xray config.</p></div></div>
-<section class="panel"><form method="post" class="settings"><label>PUBLIC_HOST<input name="PUBLIC_HOST" value="{{ setting('PUBLIC_HOST','2.26.51.80') }}"></label><label>PUBLIC_PORT<input name="PUBLIC_PORT" value="{{ setting('PUBLIC_PORT','8443') }}"></label><label>XRAY_CONFIG_PATH<input name="XRAY_CONFIG_PATH" value="{{ setting('XRAY_CONFIG_PATH','/etc/flyvpn/xray/config.json') }}"></label><label>XRAY_SERVICE_NAME<input name="XRAY_SERVICE_NAME" value="{{ setting('XRAY_SERVICE_NAME','xray') }}"></label><button class="primary">Сохранить</button></form></section>
-<section class="panel"><h2>Команды на VPS</h2><pre>ufw allow {{ setting('PUBLIC_PORT','8443') }}/tcp
-mkdir -p /etc/flyvpn/xray
-systemctl restart {{ setting('XRAY_SERVICE_NAME','xray') }}</pre></section>
+<header class="hero compact"><div><span class="eyebrow">System</span><h1>Настройки</h1><p>Адрес для Happ-ссылок и путь до Xray config.</p></div></header>
+<section class="panel"><form method="post" class="settings"><label>PUBLIC_HOST<input name="PUBLIC_HOST" value="{{ setting('PUBLIC_HOST','2.26.51.80') }}"></label><label>PUBLIC_PORT<input name="PUBLIC_PORT" value="{{ setting('PUBLIC_PORT','8443') }}"></label><label>XRAY_CONFIG_PATH<input name="XRAY_CONFIG_PATH" value="{{ setting('XRAY_CONFIG_PATH','/usr/local/etc/xray/config.json') }}"></label><label>XRAY_SERVICE_NAME<input name="XRAY_SERVICE_NAME" value="{{ setting('XRAY_SERVICE_NAME','xray') }}"></label><button class="primary">Сохранить</button></form></section>
+<section class="panel"><div class="panel-head"><h2>Команды проверки</h2></div><pre>systemctl status flyvpn-panel --no-pager -l
+systemctl status {{ setting('XRAY_SERVICE_NAME','xray') }} --no-pager -l
+ss -lntup | grep -E '8090|{{ setting('PUBLIC_PORT','8443') }}'
+curl http://127.0.0.1:8090/api/health</pre></section>
 {% endblock %}
