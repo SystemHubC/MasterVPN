@@ -8,7 +8,7 @@ DEFAULT_IP="$(curl -4 -fsS https://api.ipify.org 2>/dev/null || hostname -I | aw
 
 say(){ echo -e "$*"; }
 
-say "🪽 FlyVPN Gateway Panel v2 installer"
+say "🪽 BlackWing Gateway Panel v4 installer"
 if [[ $EUID -ne 0 ]]; then say "Запусти от root: sudo bash install.sh"; exit 1; fi
 
 apt update
@@ -18,14 +18,15 @@ mkdir -p "$APP_DIR"
 rsync -a --delete --exclude venv --exclude storage --exclude .git ./ "$APP_DIR/"
 cd "$APP_DIR"
 
-# If old .env was accidentally copied from Remnawave or another app, back it up and create a FlyVPN one.
 if [[ ! -f .env ]] || ! grep -q '^ADMIN_USERNAME=' .env 2>/dev/null; then
   if [[ -f .env ]]; then cp .env ".env.backup.$(date +%s)"; fi
   cp .env.example .env
-  SECRET="$(openssl rand -hex 32 2>/dev/null || date +%s%N)"
-  sed -i "s/^PANEL_SECRET=.*/PANEL_SECRET=$SECRET/" .env
-  sed -i "s/^PUBLIC_HOST=.*/PUBLIC_HOST=${DEFAULT_IP:-127.0.0.1}/" .env
 fi
+SECRET="$(openssl rand -hex 32 2>/dev/null || date +%s%N)"
+grep -q '^PANEL_SECRET=' .env && sed -i "s/^PANEL_SECRET=.*/PANEL_SECRET=$SECRET/" .env || echo "PANEL_SECRET=$SECRET" >> .env
+grep -q '^PUBLIC_HOST=' .env && sed -i "s/^PUBLIC_HOST=.*/PUBLIC_HOST=${DEFAULT_IP:-127.0.0.1}/" .env || echo "PUBLIC_HOST=${DEFAULT_IP:-127.0.0.1}" >> .env
+grep -q '^BRAND_NAME=' .env || echo 'BRAND_NAME=BlackWing' >> .env
+grep -q '^HAPP_DEEPLINK_PATTERN=' .env || echo 'HAPP_DEEPLINK_PATTERN=happ://add/{url}' >> .env
 
 $PYTHON_BIN -m venv venv
 source venv/bin/activate
@@ -39,34 +40,30 @@ if ! command -v xray >/dev/null 2>&1 && [[ ! -x /usr/local/bin/xray ]]; then
   bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u root
 fi
 
-cat > /etc/systemd/system/${SERVICE}.service <<'EOF'
-[Unit]
-Description=FlyVPN Gateway Panel
-After=network.target
+cp systemd/flyvpn-panel.service /etc/systemd/system/${SERVICE}.service
+cp systemd/blackwing-updater.service /etc/systemd/system/blackwing-updater.service
+cp systemd/blackwing-updater.timer /etc/systemd/system/blackwing-updater.timer
 
-[Service]
-Type=simple
-WorkingDirectory=/opt/flyvpn-gateway-panel
-EnvironmentFile=/opt/flyvpn-gateway-panel/.env
-ExecStart=/bin/bash -lc 'set -a; source /opt/flyvpn-gateway-panel/.env; set +a; exec /opt/flyvpn-gateway-panel/venv/bin/uvicorn app.main:app --host "${PANEL_HOST:-0.0.0.0}" --port "${PANEL_PORT:-8090}"'
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Generate Xray config once so xray.service has a valid file.
-source venv/bin/activate
 python - <<'PY'
-from app import xray
+from app import db, xray
+from app.upstreams import protocol_summary, count_proxy_outbounds
+import json
+
+db.init_db()
+# Backfill old upstream protocol columns.
+for up in db.rows('SELECT * FROM upstreams'):
+    try:
+        data = json.loads(up['json_text'])
+        db.execute('UPDATE upstreams SET protocol_summary=?, proxy_count=? WHERE id=?', (protocol_summary(data), count_proxy_outbounds(data), up['id']))
+    except Exception:
+        pass
 print('Xray config:', xray.write_config())
 PY
 
 systemctl daemon-reload
 systemctl enable --now "$SERVICE"
+systemctl enable --now blackwing-updater.timer
 
-# xray installer creates xray.service; if available, start/restart it.
 if systemctl list-unit-files | grep -q '^xray.service'; then
   systemctl enable xray >/dev/null 2>&1 || true
   systemctl restart xray || true
@@ -78,7 +75,8 @@ ufw allow 8443/udp || true
 
 say ""
 say "✅ Панель установлена: http://${DEFAULT_IP:-SERVER_IP}:8090"
+say "   Бренд: BlackWing"
 say "   Логин/пароль: смотри и меняй в $APP_DIR/.env"
 say ""
-say "Дальше: открой панель → Users → создай клиента с 'Все локации' → Xray → Validate → Restart."
-say "Проверка: curl http://127.0.0.1:8090/api/health"
+say "Дальше: открой панель → Settings → проверь бренд и PUBLIC_HOST → Upstreams → импорт JSON → Users → создать клиента → Xray → Validate → Restart."
+say "Автообновление: systemctl status blackwing-updater.timer --no-pager -l"

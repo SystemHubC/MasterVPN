@@ -1,9 +1,9 @@
 {% extends 'base.html' %}{% block content %}
 <header class="hero">
   <div>
-    <span class="eyebrow">FlyVPN Gateway</span>
+    <span class="eyebrow">{{ brand_name }} Gateway</span>
     <h1>Control Center</h1>
-    <p>Приватная gateway-панель: клиенты получают твой VPS и секретную подписку, а Xray маршрутизирует трафик через импортированные JSON-upstreams.</p>
+    <p>{{ vpn_description }} Управляй клиентами, безопасными подписками, локациями и Xray gateway из одной панели.</p>
   </div>
   <div class="hero-actions">
     <form method="post" action="/xray/rebuild"><button>Rebuild config</button></form>
@@ -18,8 +18,14 @@
   <div class="stat"><span>Enabled</span><b>{{ stats.enabled_upstreams }}</b><em>доступные страны</em></div>
 </div>
 
+<div class="quick-grid">
+  <div class="quick"><b>Secure subscriptions</b><span>/s/&lt;random token&gt;, не /users/1/sub</span></div>
+  <div class="quick"><b>Happ landing</b><span>Красивая страница + автокнопка happ://</span></div>
+  <div class="quick"><b>Hourly updater</b><span>Source URL обновляется таймером раз в час</span></div>
+</div>
+
 <div class="grid two">
   <section class="panel"><div class="panel-head"><h2>Последние пользователи</h2><a href="/users">Открыть</a></div><table><tr><th>ID</th><th>Клиент</th><th>Дней</th><th>Статус</th></tr>{% for u in recent_users %}<tr><td>#{{ u.id }}</td><td><b>{{ u.username }}</b><br><small>{{ u.email }}</small></td><td>{{ days_left(u) }}</td><td><span class="badge {{ 'on' if u.active else 'off' }}">{{ 'ACTIVE' if u.active else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
-  <section class="panel"><div class="panel-head"><h2>Локации</h2><a href="/upstreams">Импорт</a></div><table><tr><th>Страна</th><th>Proxy</th><th>Статус</th></tr>{% for up in upstreams %}<tr><td><b>{{ up.remark }}</b><br><small>{{ up.name }}</small></td><td>{{ up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
+  <section class="panel"><div class="panel-head"><h2>Локации</h2><a href="/upstreams">Импорт</a></div><table><tr><th>Страна</th><th>Protocols</th><th>Статус</th></tr>{% for up in upstreams %}<tr><td><b>{{ up.remark }}</b><br><small>{{ up.name }}</small></td><td>{{ up.protocol_summary or up.proxy_count }}</td><td><span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ON' if up.enabled else 'OFF' }}</span></td></tr>{% endfor %}</table></section>
 </div>
 {% endblock %}

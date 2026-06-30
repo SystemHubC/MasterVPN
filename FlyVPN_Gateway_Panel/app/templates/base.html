@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ title or 'FlyVPN Gateway' }}</title>
+  <title>{{ title or brand_name ~ ' Gateway' }}</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="noise"></div>
+  <div class="orb orb-a"></div><div class="orb orb-b"></div><div class="noise"></div>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="/">
-        <div class="brand-mark">🪽</div>
-        <div><b>FlyVPN</b><span>Gateway Control</span></div>
+        <div class="brand-mark">{{ brand_icon }}</div>
+        <div><b>{{ brand_name }}</b><span>Gateway Control</span></div>
       </a>
       <nav class="nav">
         <a href="/">⌁ <span>Dashboard</span></a>
@@ -24,7 +24,7 @@
       <div class="side-card">
         <div class="pulse"></div>
         <b>Gateway mode</b>
-        <p>Клиент видит только твой VPS, а Xray внутри уходит в выбранные JSON-upstreams.</p>
+        <p>Клиент видит бренд {{ brand_name }} и твой VPS, а Xray уходит через импортированные JSON-upstreams.</p>
       </div>
       <a class="logout" href="/logout">⎋ Выйти</a>
     </aside>

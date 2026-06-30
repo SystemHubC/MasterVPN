@@ -1,7 +1,22 @@
 {% extends 'base.html' %}{% block content %}
-<header class="hero compact"><div><span class="eyebrow">System</span><h1>Настройки</h1><p>Адрес для Happ-ссылок и путь до Xray config.</p></div></header>
-<section class="panel"><form method="post" class="settings"><label>PUBLIC_HOST<input name="PUBLIC_HOST" value="{{ setting('PUBLIC_HOST','2.26.51.80') }}"></label><label>PUBLIC_PORT<input name="PUBLIC_PORT" value="{{ setting('PUBLIC_PORT','8443') }}"></label><label>XRAY_CONFIG_PATH<input name="XRAY_CONFIG_PATH" value="{{ setting('XRAY_CONFIG_PATH','/usr/local/etc/xray/config.json') }}"></label><label>XRAY_SERVICE_NAME<input name="XRAY_SERVICE_NAME" value="{{ setting('XRAY_SERVICE_NAME','xray') }}"></label><button class="primary">Сохранить</button></form></section>
+<header class="hero compact"><div><span class="eyebrow">System</span><h1>Настройки</h1><p>Бренд, описание в Happ, deep-link, адрес для подписок и Xray config.</p></div></header>
+<section class="panel"><form method="post" class="settings">
+  <div class="settings-grid">
+    <label>BRAND_NAME<input name="BRAND_NAME" value="{{ setting('BRAND_NAME','BlackWing') }}"></label>
+    <label>BRAND_ICON<input name="BRAND_ICON" value="{{ setting('BRAND_ICON','🪽') }}"></label>
+    <label>HAPP_PROFILE_PREFIX<input name="HAPP_PROFILE_PREFIX" value="{{ setting('HAPP_PROFILE_PREFIX','BlackWing') }}"></label>
+    <label>HAPP_DEEPLINK_PATTERN<input name="HAPP_DEEPLINK_PATTERN" value="{{ setting('HAPP_DEEPLINK_PATTERN','happ://add/{url}') }}"></label>
+    <label>PUBLIC_HOST<input name="PUBLIC_HOST" value="{{ setting('PUBLIC_HOST','2.26.51.80') }}"></label>
+    <label>PUBLIC_PORT<input name="PUBLIC_PORT" value="{{ setting('PUBLIC_PORT','8443') }}"></label>
+    <label>XRAY_CONFIG_PATH<input name="XRAY_CONFIG_PATH" value="{{ setting('XRAY_CONFIG_PATH','/usr/local/etc/xray/config.json') }}"></label>
+    <label>XRAY_SERVICE_NAME<input name="XRAY_SERVICE_NAME" value="{{ setting('XRAY_SERVICE_NAME','xray') }}"></label>
+  </div>
+  <label>VPN_DESCRIPTION<textarea name="VPN_DESCRIPTION" rows="3">{{ setting('VPN_DESCRIPTION','Быстрый приватный VPN с несколькими локациями и автоподпиской для Happ.') }}</textarea></label>
+  <label class="check"><input type="checkbox" name="AUTO_RESTART_XRAY" value="1" {% if setting('AUTO_RESTART_XRAY','1')=='1' %}checked{% endif %}> После автообновления раз в час перезапускать Xray</label>
+  <button class="primary">Сохранить</button>
+</form></section>
 <section class="panel"><div class="panel-head"><h2>Команды проверки</h2></div><pre>systemctl status flyvpn-panel --no-pager -l
+systemctl status blackwing-updater.timer --no-pager -l
 systemctl status {{ setting('XRAY_SERVICE_NAME','xray') }} --no-pager -l
 ss -lntup | grep -E '8090|{{ setting('PUBLIC_PORT','8443') }}'
 curl http://127.0.0.1:8090/api/health</pre></section>

@@ -1,64 +1,62 @@
-# FlyVPN Gateway Panel v3
+# BlackWing Gateway Panel v4
 
-Собственная панель FlyVPN Gateway для схемы:
+Панель для продажи VPN через собственный gateway: клиент получает ссылку на твой VPS, а Xray на сервере маршрутизирует трафик через импортированные Happ/Xray JSON-upstreams.
 
-```text
-Покупатель -> твой VPS/Xray inbound -> импортированный Xray/Happ JSON upstream -> интернет
-```
+## Что нового в v4
 
-## Главное в v3
+- Бренд по умолчанию: **BlackWing**.
+- Красивая страница подписки `/s/<secure_token>` с инструкцией и кнопкой `happ://`.
+- Сырые подписки остаются на `/sub/<secure_token>`.
+- Никаких угадываемых `/users/1/sub` для клиента — только длинный random token.
+- Настройки названия и описания VPN для Happ: `BRAND_NAME`, `VPN_DESCRIPTION`, `HAPP_PROFILE_PREFIX`.
+- Импорт новых протоколов: `vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria`, `hysteria2`, `tuic`, `wireguard`, `socks`, `http`.
+- Source URL для upstream-конфигов и автообновление раз в час через `blackwing-updater.timer`.
+- Быстрое редактирование названий локаций, чтобы в Happ было не ID сервера, а красивое название.
 
-- Красивый тёмный интерфейс, вдохновлённый современными VPN-панелями, без копирования чужого кода.
-- Импорт чужих/партнёрских Happ/Xray JSON-конфигов как upstream-локаций. Используй только конфиги, на которые у тебя есть право.
-- Один клиент может получить все включённые локации сразу: подписка отдаёт несколько `vless://` строк.
-- Больше нет публичных `/users/1/sub`: клиентский URL только `/sub/<long_random_token>`. Token генерируется через `secrets.token_urlsafe(32)`.
-- Для каждой пары клиент+локация генерируется отдельный стабильный UUID, чтобы Xray маршрутизировал трафик в нужную страну.
-- `install.sh` сам ставит зависимости, чинит `.env`, ставит Xray, создаёт systemd-сервис и открывает порты.
-- В панели: Users, Locations, Xray Rebuild/Validate/Restart, Settings, secure token rotate.
-
-## Установка/обновление на VPS
+## Установка
 
 ```bash
-cd /opt
-rm -rf /opt/MasterVPN
-git clone https://github.com/SystemHubC/MasterVPN.git /opt/MasterVPN
 cd /opt/MasterVPN/FlyVPN_Gateway_Panel
 bash install.sh
 ```
 
-Проверка:
-
-```bash
-systemctl status flyvpn-panel --no-pager -l
-systemctl status xray --no-pager -l
-curl http://127.0.0.1:8090/api/health
-ss -lntup | grep -E '8090|8443'
-```
-
-Открыть панель:
+Панель:
 
 ```text
 http://SERVER_IP:8090
 ```
 
-Логин/пароль лежат в:
+Логин и пароль в:
 
-```text
-/opt/flyvpn-gateway-panel/.env
+```bash
+nano /opt/flyvpn-gateway-panel/.env
+systemctl restart flyvpn-panel
 ```
 
-## Как получить несколько локаций
+## Проверка
 
-В Users при создании клиента выбери `🌐 Все локации`. Тогда `/sub/<token>` отдаст все включённые страны отдельными строками:
-
-```text
-vless://uuid1@SERVER_IP:8443?...#FlyVPN-Германия
-vless://uuid2@SERVER_IP:8443?...#FlyVPN-Швеция
-vless://uuid3@SERVER_IP:8443?...#FlyVPN-Нидерланды
+```bash
+systemctl status flyvpn-panel --no-pager -l
+systemctl status blackwing-updater.timer --no-pager -l
+systemctl status xray --no-pager -l
+curl http://127.0.0.1:8090/api/health
+ss -lntup | grep -E '8090|8443'
 ```
 
-Если выбрать одну страну, подписка отдаст только её.
+## Как выдавать клиенту
 
-## Важное ограничение
+В панели зайди в **Users**, создай клиента и копируй **Landing URL**:
 
-Gateway mode проксирует трафик через твой VPS, а затем через импортированный upstream. Если upstream JSON умер, неверный, заблокирован или у тебя нет права им пользоваться, эта локация работать не будет.
+```text
+http://SERVER_IP:8090/s/<secure_token>
+```
+
+На этой странице клиент увидит инструкцию, кнопку **Открыть в Happ** и fallback ссылку подписки.
+
+## Важно про чужие конфиги
+
+Панель технически умеет импортировать чужие/партнёрские JSON-конфиги как upstream, но использовать и продавать нужно только те конфиги, на которые у тебя есть разрешение. Если upstream не твой, его могут отключить, заменить или забанить в любой момент.
+
+## Hysteria / TUIC / WireGuard
+
+v4 принимает эти протоколы при импорте. Работоспособность зависит от твоего `xray-core`. Если `Xray → Validate` покажет ошибку по протоколу или неизвестному полю, значит установленный core не поддерживает конкретный формат конфига. В этом случае импорт будет сохранён, но gateway не запустит этот upstream, пока не поставишь совместимый core или не очистишь конфиг.

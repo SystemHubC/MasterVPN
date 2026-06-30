@@ -1,0 +1,11 @@
+[Unit]
+Description=Run BlackWing Gateway updater every hour
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Unit=blackwing-updater.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

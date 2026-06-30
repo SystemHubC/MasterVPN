@@ -1,23 +1,32 @@
 {% extends 'base.html' %}{% block content %}
-<header class="hero compact"><div><span class="eyebrow">Upstreams</span><h1>VPN-локации</h1><p>Импортируй Happ/Xray JSON. Панель берёт только proxy outbounds и строит gateway-маршруты.</p></div></header>
+<header class="hero compact"><div><span class="eyebrow">Upstreams</span><h1>VPN-локации</h1><p>Импортируй Happ/Xray JSON или укажи Source URL. Поддержка: VLESS, VMess, Trojan, Shadowsocks, Hysteria/Hysteria2, TUIC, WireGuard, SOCKS, HTTP.</p></div></header>
 
-<section class="panel">
-  <div class="panel-head"><h2>Импорт JSON</h2><span class="pill ghost">vless / vmess / trojan / shadowsocks</span></div>
+<section class="panel glass-panel">
+  <div class="panel-head"><h2>Быстрый импорт</h2><span class="pill ghost">JSON / файл / URL</span></div>
   <form method="post" action="/upstreams/import" enctype="multipart/form-data">
-    <div class="form-grid import-grid"><input name="name" placeholder="Название, например Германия"><input type="file" name="file" accept=".json"><button class="primary">Импортировать</button></div>
-    <textarea name="json_text" rows="8" placeholder="Или вставь JSON сюда"></textarea>
+    <div class="form-grid import-grid"><input name="name" placeholder="Свое название, например Finland Premium"><input name="source_url" placeholder="Source URL для автообновления, необязательно"><input type="file" name="file" accept=".json"><button class="primary">Импортировать</button></div>
+    <textarea name="json_text" rows="9" placeholder="Или вставь Happ/Xray JSON сюда. Если protocol=hysteria/hysteria2/tuic/wireguard — v4 уже попробует принять это как proxy outbound."></textarea>
   </form>
 </section>
 
 <section class="panel">
-  <div class="panel-head"><h2>Все страны</h2><span>{{ upstreams|length }} конфигов</span></div>
+  <div class="panel-head"><h2>Все локации</h2><span>{{ upstreams|length }} конфигов</span></div>
   <div class="cards-list">
   {% for up in upstreams %}
-    <article class="loc-card">
-      <div><b>{{ up.remark }}</b><span>{{ up.name }}</span></div>
-      <div><small>Proxy outbounds</small><strong>{{ up.proxy_count }}</strong></div>
-      <span class="badge {{ 'on' if up.enabled else 'off' }}">{{ 'ENABLED' if up.enabled else 'DISABLED' }}</span>
-      <div class="row-actions"><form method="post" action="/upstreams/{{ up.id }}/toggle"><button>{{ 'Выключить' if up.enabled else 'Включить' }}</button></form><form method="post" action="/upstreams/{{ up.id }}/delete" onsubmit="return confirm('Удалить конфиг?')"><button class="danger">Удалить</button></form></div>
+    <article class="loc-card wide">
+      <div class="loc-main"><b>{{ up.remark }}</b><span>{{ up.name }}</span><small>{{ up.protocol_summary or 'unknown' }} · proxy: {{ up.proxy_count }}</small>{% if up.last_error %}<small class="err">Last error: {{ up.last_error }}</small>{% endif %}</div>
+      <form method="post" action="/upstreams/{{ up.id }}/update" class="loc-edit">
+        <input name="name" value="{{ up.name }}" placeholder="Внутреннее название">
+        <input name="remark" value="{{ up.remark }}" placeholder="Название в Happ/подписке">
+        <input name="source_url" value="{{ up.source_url or '' }}" placeholder="Source URL для автообновления">
+        <label class="check"><input type="checkbox" name="enabled" value="1" {% if up.enabled %}checked{% endif %}> Enabled</label>
+        <button>Сохранить</button>
+      </form>
+      <div class="row-actions">
+        <form method="post" action="/upstreams/{{ up.id }}/refresh"><button>↻ Обновить</button></form>
+        <form method="post" action="/upstreams/{{ up.id }}/toggle"><button>{{ 'Выключить' if up.enabled else 'Включить' }}</button></form>
+        <form method="post" action="/upstreams/{{ up.id }}/delete" onsubmit="return confirm('Удалить конфиг?')"><button class="danger">Удалить</button></form>
+      </div>
     </article>
   {% endfor %}
   </div>

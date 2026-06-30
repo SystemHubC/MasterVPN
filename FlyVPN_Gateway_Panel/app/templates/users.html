@@ -1,10 +1,10 @@
 {% extends 'base.html' %}{% block content %}
-<header class="hero compact"><div><span class="eyebrow">Access</span><h1>Пользователи</h1><p>Если выбрать «Все локации», подписка отдаст несколько VLESS-ссылок: Германия, Швеция, Нидерланды и т.д.</p></div></header>
+<header class="hero compact"><div><span class="eyebrow">Access</span><h1>Пользователи</h1><p>Клиенту давай Landing URL. Там красивая страница, инструкция, автооткрытие Happ и безопасная подписка с длинным token.</p></div></header>
 
-<section class="panel">
-  <div class="panel-head"><h2>Создать пользователя</h2><span class="pill ghost">subscription token = секретный длинный код</span></div>
+<section class="panel glass-panel">
+  <div class="panel-head"><h2>Создать пользователя</h2><span class="pill ghost">/s/&lt;random token&gt;</span></div>
   <form method="post" action="/users/create" class="form-grid create-user">
-    <input name="username" placeholder="Username">
+    <input name="username" placeholder="Username / ник клиента">
     <input name="tg_id" placeholder="Telegram ID">
     <select name="upstream_id"><option value="">🌐 Все локации</option>{% for up in upstreams %}<option value="{{ up.id }}">{{ up.remark }}</option>{% endfor %}</select>
     <input name="days" type="number" value="3" min="0" placeholder="Дней">
@@ -23,9 +23,10 @@
       <td><b>{{ u.username }}</b><br><small>{{ u.email }}</small><br><small>{{ u.uuid }}</small></td>
       <td><span class="badge {{ 'on' if u.active else 'off' }}">{{ 'ACTIVE' if u.active else 'OFF' }}</span><br><small>{{ days_left(u) }} дней</small><br><small>{{ u.upstream_remark or '🌐 Все локации' }}</small></td>
       <td>
-        <div class="copybox" data-copy-value="{{ sub_public_url(request, u.sub_token) }}">{{ sub_public_url(request, u.sub_token) }}</div>
-        <div class="row-actions"><button type="button" class="pill" data-copy="{{ sub_public_url(request, u.sub_token) }}">Copy secure sub</button><a class="pill" target="_blank" href="/sub/{{ u.sub_token }}">TXT sub</a><a class="pill" target="_blank" href="/api/sub/{{ u.sub_token }}">JSON API</a></div>
-        <small>Секретный token, не ID. Внутри: {{ sub_link_count(u) }} VLESS-ссылок по локациям.</small>
+        <small>Landing для клиента</small>
+        <div class="copybox" data-copy-value="{{ landing_public_url(request, u.sub_token) }}">{{ landing_public_url(request, u.sub_token) }}</div>
+        <div class="row-actions"><button type="button" class="pill" data-copy="{{ landing_public_url(request, u.sub_token) }}">Copy landing</button><a class="pill" target="_blank" href="/s/{{ u.sub_token }}">Preview</a><a class="pill" target="_blank" href="/sub/{{ u.sub_token }}">TXT sub</a><a class="pill" target="_blank" href="/api/sub/{{ u.sub_token }}">JSON</a></div>
+        <small>Внутри: {{ sub_link_count(u) }} VLESS-ссылок. Старый /users/{{ u.id }}/sub только для админа после входа.</small>
       </td>
       <td><details><summary class="pill">Изменить</summary><form method="post" action="/users/{{ u.id }}/update" class="mini"><input name="username" value="{{ u.username }}"><select name="upstream_id"><option value="">🌐 Все локации</option>{% for up in upstreams %}<option value="{{ up.id }}" {% if u.upstream_id==up.id %}selected{% endif %}>{{ up.remark }}</option>{% endfor %}</select><label class="check"><input type="checkbox" name="active" value="1" {% if u.active %}checked{% endif %}> Active</label><input name="days_add" type="number" value="0" placeholder="+ дней"><input name="notes" value="{{ u.notes }}"><button>Сохранить</button></form><form method="post" action="/users/{{ u.id }}/rotate-token"><button>🔐 Новый token</button></form><form method="post" action="/users/{{ u.id }}/delete" onsubmit="return confirm('Удалить?')"><button class="danger">Удалить</button></form></details></td>
     </tr>

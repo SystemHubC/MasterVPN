@@ -1,5 +1,5 @@
 [Unit]
-Description=FlyVPN Gateway Panel
+Description=BlackWing Gateway Panel
 After=network.target
 
 [Service]

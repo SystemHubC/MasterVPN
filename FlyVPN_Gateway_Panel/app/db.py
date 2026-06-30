@@ -35,8 +35,7 @@ def parse_iso(value: str | None) -> datetime | None:
 
 
 def new_token() -> str:
-    # ~43 chars, not guessable by brute force.
-    return secrets.token_urlsafe(32)
+    return secrets.token_urlsafe(48)
 
 
 @contextmanager
@@ -69,6 +68,12 @@ def execute(sql: str, params: Iterable[Any] = ()) -> int:
 
 def _columns(c: sqlite3.Connection, table: str) -> set[str]:
     return {str(r[1]) for r in c.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def _add_col(c: sqlite3.Connection, table: str, cols: set[str], name: str, sql: str) -> None:
+    if name not in cols:
+        c.execute(f"ALTER TABLE {table} ADD COLUMN {name} {sql}")
+        cols.add(name)
 
 
 def init_db() -> None:
@@ -122,12 +127,15 @@ def init_db() -> None:
             """
         )
 
-        # Soft migrations for already installed versions.
         user_cols = _columns(c, "users")
-        if "traffic_limit_gb" not in user_cols:
-            c.execute("ALTER TABLE users ADD COLUMN traffic_limit_gb INTEGER NOT NULL DEFAULT 0")
-        if "notes" not in user_cols:
-            c.execute("ALTER TABLE users ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+        _add_col(c, "users", user_cols, "traffic_limit_gb", "INTEGER NOT NULL DEFAULT 0")
+        _add_col(c, "users", user_cols, "notes", "TEXT NOT NULL DEFAULT ''")
+
+        up_cols = _columns(c, "upstreams")
+        _add_col(c, "upstreams", up_cols, "source_url", "TEXT NOT NULL DEFAULT ''")
+        _add_col(c, "upstreams", up_cols, "protocol_summary", "TEXT NOT NULL DEFAULT ''")
+        _add_col(c, "upstreams", up_cols, "last_update_at", "TEXT")
+        _add_col(c, "upstreams", up_cols, "last_error", "TEXT NOT NULL DEFAULT ''")
 
         count = c.execute("SELECT COUNT(*) AS n FROM plans").fetchone()["n"]
         if count == 0:
@@ -137,15 +145,25 @@ def init_db() -> None:
                 ("6 месяцев", 180, 899),
                 ("1 год", 365, 1599),
             ]:
-                c.execute(
-                    "INSERT INTO plans(name, days, price_rub, enabled) VALUES(?,?,?,1)",
-                    (name, days, price),
-                )
+                c.execute("INSERT INTO plans(name, days, price_rub, enabled) VALUES(?,?,?,1)", (name, days, price))
 
-        # Upgrade short old tokens to long random subscription secrets.
+        # Default product settings.
+        defaults = {
+            "BRAND_NAME": "BlackWing",
+            "BRAND_ICON": "🪽",
+            "VPN_DESCRIPTION": "Быстрый приватный VPN с несколькими локациями и автоподпиской для Happ.",
+            "HAPP_PROFILE_PREFIX": "BlackWing",
+            "HAPP_DEEPLINK_PATTERN": "happ://add/{url}",
+            "AUTO_RESTART_XRAY": "1",
+        }
+        for k, v in defaults.items():
+            exists = c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone()
+            if not exists:
+                c.execute("INSERT INTO settings(key,value) VALUES(?,?)", (k, v))
+
         for r in c.execute("SELECT id, sub_token FROM users").fetchall():
             tok = str(r["sub_token"] or "")
-            if len(tok) < 32:
+            if len(tok) < 48:
                 c.execute("UPDATE users SET sub_token=? WHERE id=?", (new_token(), r["id"]))
 
 
@@ -160,7 +178,7 @@ def set_setting(key: str, value: str) -> None:
 
 def make_user(username: str, upstream_id: int | None, days: int = 3, tg_id: int | None = None, notes: str = "") -> int:
     base_uuid = str(uuid.uuid4())
-    email = f"flyvpn_{secrets.token_hex(5)}"
+    email = f"blackwing_{secrets.token_hex(5)}"
     token = new_token()
     expires = iso(utcnow() + timedelta(days=days)) if days > 0 else None
     return execute(
@@ -195,7 +213,7 @@ def days_left(u: dict[str, Any]) -> int:
 
 
 def seed_upstreams_from_dir(path: Path) -> int:
-    from app.upstreams import count_proxy_outbounds, remark_from_config
+    from app.upstreams import count_proxy_outbounds, remark_from_config, protocol_summary
     added = 0
     for fp in sorted(path.glob("*.json")):
         raw = fp.read_text(encoding="utf-8")
@@ -209,8 +227,9 @@ def seed_upstreams_from_dir(path: Path) -> int:
         if exists:
             continue
         execute(
-            "INSERT INTO upstreams(name, remark, enabled, json_text, proxy_count, created_at) VALUES(?,?,?,?,?,?)",
-            (name, remark, 1, json.dumps(data, ensure_ascii=False, indent=2), count_proxy_outbounds(data), iso(utcnow())),
+            """INSERT INTO upstreams(name, remark, enabled, json_text, proxy_count, protocol_summary, created_at)
+                 VALUES(?,?,?,?,?,?,?)""",
+            (name, remark, 1, json.dumps(data, ensure_ascii=False, indent=2), count_proxy_outbounds(data), protocol_summary(data), iso(utcnow())),
         )
         added += 1
     return added

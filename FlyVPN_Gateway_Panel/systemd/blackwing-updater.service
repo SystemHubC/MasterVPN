@@ -1,0 +1,9 @@
+[Unit]
+Description=BlackWing Gateway hourly upstream updater
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/flyvpn-gateway-panel
+EnvironmentFile=/opt/flyvpn-gateway-panel/.env
+ExecStart=/opt/flyvpn-gateway-panel/venv/bin/python /opt/flyvpn-gateway-panel/scripts/auto_update.py

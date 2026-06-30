@@ -6,6 +6,7 @@ import subprocess
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from app import db
 from app.upstreams import upstream_to_xray_objects, safe_tag
@@ -13,6 +14,18 @@ from app.upstreams import upstream_to_xray_objects, safe_tag
 
 def env(name: str, default: str = "") -> str:
     return os.getenv(name, default)
+
+
+def brand_name() -> str:
+    return db.setting("BRAND_NAME", env("BRAND_NAME", "BlackWing")) or "BlackWing"
+
+
+def vpn_description() -> str:
+    return db.setting("VPN_DESCRIPTION", env("VPN_DESCRIPTION", "Private VPN subscription"))
+
+
+def profile_prefix() -> str:
+    return db.setting("HAPP_PROFILE_PREFIX", env("HAPP_PROFILE_PREFIX", brand_name())) or brand_name()
 
 
 def public_host() -> str:
@@ -39,14 +52,12 @@ def upstreams_for_user(u: dict[str, Any], upstreams: list[dict[str, Any]] | None
     upid = u.get("upstream_id")
     if upid:
         return [up for up in all_upstreams if int(up["id"]) == int(upid)]
-    # upstream_id = NULL means ALL enabled locations in subscription.
     return list(all_upstreams)
 
 
 def identity_for_user_location(u: dict[str, Any], upstream_id: int) -> dict[str, str]:
-    # Stable per-user/per-location UUID. One customer can have 6 locations, each routed separately.
     namespace = uuid.UUID(str(u["uuid"]))
-    loc_uuid = str(uuid.uuid5(namespace, f"flyvpn-upstream-{int(upstream_id)}"))
+    loc_uuid = str(uuid.uuid5(namespace, f"blackwing-upstream-{int(upstream_id)}"))
     email = f"{u['email']}_loc_{int(upstream_id)}"
     return {"uuid": loc_uuid, "email": email}
 
@@ -78,7 +89,7 @@ def build_config() -> dict[str, Any]:
     clients: list[dict[str, Any]] = []
     rules: list[dict[str, Any]] = [
         {"type": "field", "inboundTag": ["api"], "outboundTag": "api"},
-        {"type": "field", "protocol": ["bittorrent"], "outboundTag": "BLOCK"},
+        {"type": "field", "protocol": ["bittorrent"], "outboundTag": "DIRECT"},
     ]
 
     for u in users:
@@ -106,8 +117,8 @@ def build_config() -> dict[str, Any]:
     return {
         "log": {
             "loglevel": "warning",
-            "access": "/var/log/xray/flyvpn-access.log",
-            "error": "/var/log/xray/flyvpn-error.log",
+            "access": "/var/log/xray/blackwing-access.log",
+            "error": "/var/log/xray/blackwing-error.log",
         },
         "api": {"tag": "api", "services": ["HandlerService", "LoggerService", "StatsService"]},
         "stats": {},
@@ -129,7 +140,7 @@ def build_config() -> dict[str, Any]:
                 "settings": {"address": "127.0.0.1"},
             },
             {
-                "tag": "flyvpn-users",
+                "tag": "blackwing-users",
                 "listen": "0.0.0.0",
                 "port": public_port(),
                 "protocol": "vless",
@@ -171,12 +182,19 @@ def validate_with_xray() -> tuple[bool, str]:
         return False, str(e)
 
 
-def vless_link_for_location(u: dict[str, Any], up: dict[str, Any]) -> str:
-    from urllib.parse import quote
+def link_label(up: dict[str, Any]) -> str:
+    loc = str(up.get("remark") or up.get("name") or "Location").strip()
+    prefix = profile_prefix()
+    desc = vpn_description().strip()
+    # Happ usually displays the URL fragment as profile name. Keep it readable and branded.
+    if desc:
+        return f"{prefix} · {loc} — {desc[:70]}"
+    return f"{prefix} · {loc}"
 
+
+def vless_link_for_location(u: dict[str, Any], up: dict[str, Any]) -> str:
     ident = identity_for_user_location(u, int(up["id"]))
-    label = f"FlyVPN-{up.get('remark') or up.get('name') or 'Location'}"
-    return f"vless://{ident['uuid']}@{public_host()}:{public_port()}?encryption=none&type=tcp&security=none#{quote(label)}"
+    return f"vless://{ident['uuid']}@{public_host()}:{public_port()}?encryption=none&type=tcp&security=none#{quote(link_label(up))}"
 
 
 def vless_links(u: dict[str, Any]) -> list[str]:
@@ -187,6 +205,5 @@ def vless_link(u: dict[str, Any], label: str | None = None) -> str:
     links = vless_links(u)
     if links:
         return links[0]
-    from urllib.parse import quote
-    label = label or f"FlyVPN-{u.get('username') or u.get('email')}"
+    label = label or f"{profile_prefix()} · {u.get('username') or u.get('email')}"
     return f"vless://{u['uuid']}@{public_host()}:{public_port()}?encryption=none&type=tcp&security=none#{quote(label)}"

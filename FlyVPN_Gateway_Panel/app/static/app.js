@@ -1,8 +1,11 @@
-(function(){
-  document.querySelectorAll('[data-copy]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      try{ await navigator.clipboard.writeText(btn.getAttribute('data-copy')||''); btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent='Copy secure sub',1200); }
-      catch(e){ alert('Не смог скопировать: '+e); }
-    });
-  });
-})();
+document.addEventListener('click', async (e)=>{
+  const el = e.target.closest('[data-copy]');
+  if(!el) return;
+  const text = el.getAttribute('data-copy');
+  try{
+    await navigator.clipboard.writeText(text);
+    const old = el.textContent;
+    el.textContent = 'Скопировано';
+    setTimeout(()=>{el.textContent = old}, 1200);
+  }catch(err){ prompt('Скопируй вручную:', text); }
+});
