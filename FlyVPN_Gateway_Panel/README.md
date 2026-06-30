@@ -1,23 +1,26 @@
-# BlackWing Gateway Panel v4
+# BlackWing Gateway Panel v6
 
-Панель для продажи VPN через собственный gateway: клиент получает ссылку на твой VPS, а Xray на сервере маршрутизирует трафик через импортированные Happ/Xray JSON-upstreams.
+Панель для продажи VPN-подписок BlackWing с импортом готовых Happ/Xray JSON-конфигов.
 
-## Что нового в v4
+## Главное в v6
 
-- Бренд по умолчанию: **BlackWing**.
-- Красивая страница подписки `/s/<secure_token>` с инструкцией и кнопкой `happ://`.
-- Сырые подписки остаются на `/sub/<secure_token>`.
-- Никаких угадываемых `/users/1/sub` для клиента — только длинный random token.
-- Настройки названия и описания VPN для Happ: `BRAND_NAME`, `VPN_DESCRIPTION`, `HAPP_PROFILE_PREFIX`.
-- Импорт новых протоколов: `vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria`, `hysteria2`, `tuic`, `wireguard`, `socks`, `http`.
-- Source URL для upstream-конфигов и автообновление раз в час через `blackwing-updater.timer`.
-- Быстрое редактирование названий локаций, чтобы в Happ было не ID сервера, а красивое название.
+- Подписка в Happ выглядит как нормальная VPN-группа: **BlackWing VPN**, автообновление **1 час**, срок и лимит трафика через subscription headers.
+- `/sub/<secure_token>` в режиме `direct + array` отдаёт **массив JSON-профилей**, один профиль на каждую локацию. Это ближе к виду: `Нидерланды / Финляндия / Германия`, а не куча `vless://...@IP`.
+- Названия локаций короткие: `🇩🇪 Германия (🔥 Новые блокировки)`, без длинного описания в каждой строке.
+- Есть `/s/<secure_token>` — красивая страница с кнопкой **Открыть в Happ**.
+- Есть `/links/<secure_token>` — отдельные gateway VLESS links, если они нужны.
+- Поддерживается импорт `vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria`, `hysteria2`, `tuic`, `wireguard`, `socks`, `http`.
+- Source URL и автообновление upstream-конфигов через `blackwing-updater.timer`.
 
-## Установка
+## Установка / обновление
 
 ```bash
+cd /opt/MasterVPN
+# сначала залей v6 в GitHub, потом:
+git pull
 cd /opt/MasterVPN/FlyVPN_Gateway_Panel
 bash install.sh
+systemctl restart flyvpn-panel
 ```
 
 Панель:
@@ -26,11 +29,29 @@ bash install.sh
 http://SERVER_IP:8090
 ```
 
-Логин и пароль в:
+## Рекомендуемые настройки для Happ
 
-```bash
-nano /opt/flyvpn-gateway-panel/.env
-systemctl restart flyvpn-panel
+В панели открой **Settings** и поставь:
+
+```text
+SUBSCRIPTION_MODE = direct
+DIRECT_OUTPUT_MODE = array
+HAPP_SUBSCRIPTION_TITLE = BlackWing VPN
+HAPP_LOCATION_SUFFIX = 🔥 Новые блокировки
+SUB_UPDATE_INTERVAL_HOURS = 1
+DEFAULT_TRAFFIC_LIMIT_GB = 10
+```
+
+После этого клиенту давай:
+
+```text
+http://SERVER_IP:8090/s/<secure_token>
+```
+
+Happ будет получать подписку:
+
+```text
+http://SERVER_IP:8090/sub/<secure_token>
 ```
 
 ## Проверка
@@ -38,25 +59,12 @@ systemctl restart flyvpn-panel
 ```bash
 systemctl status flyvpn-panel --no-pager -l
 systemctl status blackwing-updater.timer --no-pager -l
-systemctl status xray --no-pager -l
 curl http://127.0.0.1:8090/api/health
 ss -lntup | grep -E '8090|8443'
 ```
 
-## Как выдавать клиенту
+## Важно
 
-В панели зайди в **Users**, создай клиента и копируй **Landing URL**:
+Direct-режим нужен для конфигов, которые работают именно в Happ: Reality/gRPC, Hysteria/finalmask и другие client-specific варианты. Gateway-режим даёт больше контроля доступа, но не все чужие протоколы можно стабильно проксировать через серверный Xray.
 
-```text
-http://SERVER_IP:8090/s/<secure_token>
-```
-
-На этой странице клиент увидит инструкцию, кнопку **Открыть в Happ** и fallback ссылку подписки.
-
-## Важно про чужие конфиги
-
-Панель технически умеет импортировать чужие/партнёрские JSON-конфиги как upstream, но использовать и продавать нужно только те конфиги, на которые у тебя есть разрешение. Если upstream не твой, его могут отключить, заменить или забанить в любой момент.
-
-## Hysteria / TUIC / WireGuard
-
-v4 принимает эти протоколы при импорте. Работоспособность зависит от твоего `xray-core`. Если `Xray → Validate` покажет ошибку по протоколу или неизвестному полю, значит установленный core не поддерживает конкретный формат конфига. В этом случае импорт будет сохранён, но gateway не запустит этот upstream, пока не поставишь совместимый core или не очистишь конфиг.
+Используй только свои или партнёрские конфиги, на которые у тебя есть разрешение.

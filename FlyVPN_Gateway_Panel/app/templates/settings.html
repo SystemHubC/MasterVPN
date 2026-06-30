@@ -1,17 +1,33 @@
 {% extends 'base.html' %}{% block content %}
-<header class="hero compact"><div><span class="eyebrow">System</span><h1>Настройки</h1><p>Бренд, описание в Happ, deep-link, адрес для подписок и Xray config.</p></div></header>
+<header class="hero compact"><div><span class="eyebrow">BlackWing Control</span><h1>Настройки</h1><p>Здесь настраивается то, как подписка будет выглядеть в Happ: название группы, автообновление, лимит, подписи локаций и режим выдачи.</p></div></header>
 <section class="panel"><form method="post" class="settings">
+  <div class="panel-head"><h2>Бренд и Happ</h2><span class="pill ghost">как на нормальных VPN-подписках</span></div>
   <div class="settings-grid">
     <label>BRAND_NAME<input name="BRAND_NAME" value="{{ setting('BRAND_NAME','BlackWing') }}"></label>
     <label>BRAND_ICON<input name="BRAND_ICON" value="{{ setting('BRAND_ICON','🪽') }}"></label>
+    <label>HAPP_SUBSCRIPTION_TITLE<input name="HAPP_SUBSCRIPTION_TITLE" value="{{ setting('HAPP_SUBSCRIPTION_TITLE','BlackWing VPN') }}"></label>
     <label>HAPP_PROFILE_PREFIX<input name="HAPP_PROFILE_PREFIX" value="{{ setting('HAPP_PROFILE_PREFIX','BlackWing') }}"></label>
+    <label>HAPP_LOCATION_SUFFIX<input name="HAPP_LOCATION_SUFFIX" value="{{ setting('HAPP_LOCATION_SUFFIX','🔥 Новые блокировки') }}"></label>
     <label>HAPP_DEEPLINK_PATTERN<input name="HAPP_DEEPLINK_PATTERN" value="{{ setting('HAPP_DEEPLINK_PATTERN','happ://add/{url}') }}"></label>
+    <label>SUB_UPDATE_INTERVAL_HOURS<input name="SUB_UPDATE_INTERVAL_HOURS" type="number" min="1" value="{{ setting('SUB_UPDATE_INTERVAL_HOURS','1') }}"></label>
+    <label>DEFAULT_TRAFFIC_LIMIT_GB<input name="DEFAULT_TRAFFIC_LIMIT_GB" type="number" min="0" value="{{ setting('DEFAULT_TRAFFIC_LIMIT_GB','10') }}"></label>
+  </div>
+
+  <div class="panel-head"><h2>Режим подписки</h2><span class="pill ghost">direct рекомендован для Happ</span></div>
+  <div class="settings-grid">
+    <label>SUBSCRIPTION_MODE<select name="SUBSCRIPTION_MODE"><option value="direct" {% if setting('SUBSCRIPTION_MODE','direct')=='direct' %}selected{% endif %}>direct — Happ получает JSON-конфиги напрямую</option><option value="gateway" {% if setting('SUBSCRIPTION_MODE','direct')=='gateway' %}selected{% endif %}>gateway — VLESS на твой VPS</option><option value="hybrid" {% if setting('SUBSCRIPTION_MODE','direct')=='hybrid' %}selected{% endif %}>hybrid — direct + gateway отдельно</option></select></label>
+    <label>DIRECT_OUTPUT_MODE<select name="DIRECT_OUTPUT_MODE"><option value="array" {% if setting('DIRECT_OUTPUT_MODE','array')=='array' %}selected{% endif %}>array — много JSON-профилей, как список локаций в Happ</option><option value="single" {% if setting('DIRECT_OUTPUT_MODE','array')=='single' %}selected{% endif %}>single — только первый JSON</option><option value="merged" {% if setting('DIRECT_OUTPUT_MODE','array')=='merged' %}selected{% endif %}>merged — один JSON с balancer</option></select></label>
+  </div>
+
+  <label>VPN_DESCRIPTION<textarea name="VPN_DESCRIPTION" rows="3">{{ setting('VPN_DESCRIPTION','Быстрый приватный VPN с несколькими локациями и автоподпиской для Happ.') }}</textarea></label>
+
+  <div class="panel-head"><h2>Сервер</h2><span class="pill ghost">gateway / xray</span></div>
+  <div class="settings-grid">
     <label>PUBLIC_HOST<input name="PUBLIC_HOST" value="{{ setting('PUBLIC_HOST','2.26.51.80') }}"></label>
     <label>PUBLIC_PORT<input name="PUBLIC_PORT" value="{{ setting('PUBLIC_PORT','8443') }}"></label>
     <label>XRAY_CONFIG_PATH<input name="XRAY_CONFIG_PATH" value="{{ setting('XRAY_CONFIG_PATH','/usr/local/etc/xray/config.json') }}"></label>
     <label>XRAY_SERVICE_NAME<input name="XRAY_SERVICE_NAME" value="{{ setting('XRAY_SERVICE_NAME','xray') }}"></label>
   </div>
-  <label>VPN_DESCRIPTION<textarea name="VPN_DESCRIPTION" rows="3">{{ setting('VPN_DESCRIPTION','Быстрый приватный VPN с несколькими локациями и автоподпиской для Happ.') }}</textarea></label>
   <label class="check"><input type="checkbox" name="AUTO_RESTART_XRAY" value="1" {% if setting('AUTO_RESTART_XRAY','1')=='1' %}checked{% endif %}> После автообновления раз в час перезапускать Xray</label>
   <button class="primary">Сохранить</button>
 </form></section>

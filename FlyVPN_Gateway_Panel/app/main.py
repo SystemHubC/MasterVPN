@@ -25,7 +25,9 @@ db.init_db()
 db.seed_upstreams_from_dir(BASE_DIR / "data" / "upstreams")
 for k in [
     "PUBLIC_HOST", "PUBLIC_PORT", "XRAY_CONFIG_PATH", "XRAY_SERVICE_NAME",
-    "BRAND_NAME", "VPN_DESCRIPTION", "HAPP_PROFILE_PREFIX", "HAPP_DEEPLINK_PATTERN",
+    "BRAND_NAME", "VPN_DESCRIPTION", "HAPP_PROFILE_PREFIX", "HAPP_SUBSCRIPTION_TITLE",
+    "HAPP_LOCATION_SUFFIX", "HAPP_DEEPLINK_PATTERN", "SUB_UPDATE_INTERVAL_HOURS",
+    "DEFAULT_TRAFFIC_LIMIT_GB", "DIRECT_OUTPUT_MODE", "SUBSCRIPTION_MODE",
 ]:
     if os.getenv(k) and not db.setting(k):
         db.set_setting(k, os.getenv(k, ""))
@@ -61,6 +63,10 @@ def public_api_sub_url(request: Request, token: str) -> str:
     return f"{str(request.base_url).rstrip('/')}/api/sub/{token}"
 
 
+def public_gateway_links_url(request: Request, token: str) -> str:
+    return f"{str(request.base_url).rstrip('/')}/links/{token}"
+
+
 def happ_deeplink(request: Request, token: str) -> str:
     raw_url = public_sub_url(request, token)
     pattern = db.setting("HAPP_DEEPLINK_PATTERN", "happ://add/{url}") or "happ://add/{url}"
@@ -81,8 +87,10 @@ def ctx(request: Request, **extra: Any) -> dict[str, Any]:
         "sub_public_url": public_sub_url,
         "landing_public_url": public_landing_url,
         "api_sub_public_url": public_api_sub_url,
+        "gateway_links_public_url": public_gateway_links_url,
         "happ_deeplink": happ_deeplink,
         "sub_link_count": sub_link_count,
+        "direct_profile_count": lambda u: len(xray.direct_client_configs(u)),
         "brand_name": db.setting("BRAND_NAME", "BlackWing"),
         "brand_icon": db.setting("BRAND_ICON", "🪽"),
         "vpn_description": db.setting("VPN_DESCRIPTION", ""),
@@ -141,18 +149,19 @@ def users(request: Request):
 
 
 @app.post("/users/create")
-def users_create(request: Request, username: str = Form(""), tg_id: str = Form(""), upstream_id: str = Form(""), days: int = Form(3), notes: str = Form("")):
+def users_create(request: Request, username: str = Form(""), tg_id: str = Form(""), upstream_id: str = Form(""), days: int = Form(3), traffic_limit_gb: int = Form(0), notes: str = Form("")):
     require_login(request)
     tid = int(tg_id) if tg_id.strip().isdigit() else None
     upid = int(upstream_id) if upstream_id.strip().isdigit() else None
-    db.make_user(username=username or "client", tg_id=tid, upstream_id=upid, days=days, notes=notes)
+    uid = db.make_user(username=username or "client", tg_id=tid, upstream_id=upid, days=days, notes=notes)
+    db.execute("UPDATE users SET traffic_limit_gb=? WHERE id=?", (max(0, int(traffic_limit_gb)), uid))
     xray.write_config()
     flash(request, "Клиент создан. Давай ему landing URL: там автокнопка Happ и инструкция.")
     return RedirectResponse("/users", status_code=303)
 
 
 @app.post("/users/{uid}/update")
-def users_update(request: Request, uid: int, username: str = Form(""), upstream_id: str = Form(""), active: str = Form("0"), days_add: int = Form(0), notes: str = Form("")):
+def users_update(request: Request, uid: int, username: str = Form(""), upstream_id: str = Form(""), active: str = Form("0"), days_add: int = Form(0), traffic_limit_gb: int = Form(0), notes: str = Form("")):
     require_login(request)
     u = db.row("SELECT * FROM users WHERE id=?", (uid,))
     if not u:
@@ -161,7 +170,7 @@ def users_update(request: Request, uid: int, username: str = Form(""), upstream_
     if days_add:
         exp = max(exp, db.utcnow()) + timedelta(days=int(days_add))
     upid = int(upstream_id) if upstream_id.strip().isdigit() else None
-    db.execute("UPDATE users SET username=?, upstream_id=?, active=?, expires_at=?, notes=? WHERE id=?", (username, upid, 1 if active == "1" else 0, db.iso(exp), notes, uid))
+    db.execute("UPDATE users SET username=?, upstream_id=?, active=?, expires_at=?, traffic_limit_gb=?, notes=? WHERE id=?", (username, upid, 1 if active == "1" else 0, db.iso(exp), max(0, int(traffic_limit_gb)), notes, uid))
     xray.write_config()
     flash(request, "Клиент обновлён, Xray config пересобран")
     return RedirectResponse("/users", status_code=303)
@@ -321,7 +330,7 @@ def settings_get(request: Request):
 
 
 @app.post("/settings")
-def settings_post(request: Request, PUBLIC_HOST: str = Form(...), PUBLIC_PORT: str = Form(...), XRAY_CONFIG_PATH: str = Form(...), XRAY_SERVICE_NAME: str = Form(...), BRAND_NAME: str = Form(...), BRAND_ICON: str = Form("🪽"), VPN_DESCRIPTION: str = Form(""), HAPP_PROFILE_PREFIX: str = Form(""), HAPP_DEEPLINK_PATTERN: str = Form("happ://add/{url}"), AUTO_RESTART_XRAY: str = Form("0")):
+def settings_post(request: Request, PUBLIC_HOST: str = Form(...), PUBLIC_PORT: str = Form(...), XRAY_CONFIG_PATH: str = Form(...), XRAY_SERVICE_NAME: str = Form(...), BRAND_NAME: str = Form(...), BRAND_ICON: str = Form("🪽"), VPN_DESCRIPTION: str = Form(""), HAPP_PROFILE_PREFIX: str = Form(""), HAPP_SUBSCRIPTION_TITLE: str = Form(""), HAPP_LOCATION_SUFFIX: str = Form(""), HAPP_DEEPLINK_PATTERN: str = Form("happ://add/{url}"), SUB_UPDATE_INTERVAL_HOURS: str = Form("1"), DEFAULT_TRAFFIC_LIMIT_GB: str = Form("10"), DIRECT_OUTPUT_MODE: str = Form("array"), SUBSCRIPTION_MODE: str = Form("direct"), AUTO_RESTART_XRAY: str = Form("0")):
     require_login(request)
     data = {
         "PUBLIC_HOST": PUBLIC_HOST,
@@ -332,8 +341,14 @@ def settings_post(request: Request, PUBLIC_HOST: str = Form(...), PUBLIC_PORT: s
         "BRAND_ICON": BRAND_ICON,
         "VPN_DESCRIPTION": VPN_DESCRIPTION,
         "HAPP_PROFILE_PREFIX": HAPP_PROFILE_PREFIX or BRAND_NAME,
+        "HAPP_SUBSCRIPTION_TITLE": HAPP_SUBSCRIPTION_TITLE or f"{BRAND_NAME} VPN",
+        "HAPP_LOCATION_SUFFIX": HAPP_LOCATION_SUFFIX,
         "HAPP_DEEPLINK_PATTERN": HAPP_DEEPLINK_PATTERN,
+        "SUB_UPDATE_INTERVAL_HOURS": str(max(1, int(SUB_UPDATE_INTERVAL_HOURS or "1"))),
+        "DEFAULT_TRAFFIC_LIMIT_GB": str(max(0, int(DEFAULT_TRAFFIC_LIMIT_GB or "0"))),
+        "DIRECT_OUTPUT_MODE": DIRECT_OUTPUT_MODE if DIRECT_OUTPUT_MODE in {"array", "merged", "single"} else "array",
         "AUTO_RESTART_XRAY": "1" if AUTO_RESTART_XRAY == "1" else "0",
+        "SUBSCRIPTION_MODE": SUBSCRIPTION_MODE if SUBSCRIPTION_MODE in {"direct", "gateway", "hybrid"} else "direct",
     }
     for k, v in data.items():
         db.set_setting(k, v.strip())
@@ -356,15 +371,17 @@ def _get_public_user_by_token(token: str) -> dict[str, Any]:
 def subscription_landing(request: Request, token: str):
     u = _get_public_user_by_token(token)
     links = xray.vless_links(u)
-    if not links:
+    if not links and xray.subscription_mode() == "gateway":
         raise HTTPException(404, "no locations available")
     return tpl.TemplateResponse(request, "subscription.html", ctx(
         request,
         public_user=u,
         links=links,
         raw_sub_url=public_sub_url(request, token),
+        gateway_links_url=public_gateway_links_url(request, token),
         api_sub_url=public_api_sub_url(request, token),
         happ_url=happ_deeplink(request, token),
+        subscription_mode=xray.subscription_mode(),
     ))
 
 
@@ -374,13 +391,50 @@ def happ_redirect(request: Request, token: str):
     return RedirectResponse(happ_deeplink(request, token), status_code=302)
 
 
-@app.get("/sub/{token}", response_class=PlainTextResponse)
-def subscription(token: str):
+@app.get("/links/{token}", response_class=PlainTextResponse)
+def gateway_links(token: str):
     u = _get_public_user_by_token(token)
     links = xray.vless_links(u)
     if not links:
         raise HTTPException(404, "no locations available")
     return "\n".join(links) + "\n"
+
+
+def _subscription_headers(request: Request, u: dict[str, Any]) -> dict[str, str]:
+    exp = db.parse_iso(u.get("expires_at"))
+    expire_ts = str(int(exp.timestamp())) if exp else "0"
+    gb = int(u.get("traffic_limit_gb") or 0) or xray.default_traffic_limit_gb()
+    total = gb * 1024 * 1024 * 1024 if gb > 0 else 0
+    title = xray.subscription_title()
+    return {
+        "subscription-userinfo": f"upload=0; download=0; total={total}; expire={expire_ts}",
+        "profile-title": title,
+        "profile-update-interval": str(xray.update_interval_hours()),
+        "profile-web-page-url": public_landing_url(request, u["sub_token"]),
+        "support-url": public_landing_url(request, u["sub_token"]),
+        "cache-control": "no-store",
+    }
+
+
+@app.get("/sub/{token}")
+def subscription(request: Request, token: str, mode: str | None = None, format: str | None = None):
+    u = _get_public_user_by_token(token)
+    selected = (mode or xray.subscription_mode()).lower()
+    headers = _subscription_headers(request, u)
+    if selected == "gateway":
+        links = xray.vless_links(u)
+        if not links:
+            raise HTTPException(404, "no locations available")
+        return PlainTextResponse("\n".join(links) + "\n", headers=headers)
+
+    output_mode = (format or db.setting("DIRECT_OUTPUT_MODE", "array") or "array").lower()
+    if output_mode == "merged":
+        return JSONResponse(xray.merged_direct_client_config(u), headers=headers)
+
+    configs = xray.direct_client_configs(u)
+    if output_mode == "single" or len(configs) == 1:
+        return JSONResponse(configs[0], headers=headers)
+    return JSONResponse(configs, headers=headers)
 
 
 @app.get("/api/sub/{token}")
@@ -401,9 +455,15 @@ def subscription_json(request: Request, token: str):
             "isActive": bool(u["active"]),
             "daysLeft": db.days_left(u),
         },
+        "mode": xray.subscription_mode(),
         "links": links,
         "linkCount": len(links),
+        "directProfileCount": len(xray.direct_client_configs(u)),
+        "subscriptionTitle": xray.subscription_title(),
+        "updateIntervalHours": xray.update_interval_hours(),
         "subscriptionUrl": public_sub_url(request, token),
+        "directConfigUrl": public_sub_url(request, token),
+        "gatewayLinksUrl": public_gateway_links_url(request, token),
         "landingUrl": public_landing_url(request, token),
         "happUrl": happ_deeplink(request, token),
     }
@@ -420,4 +480,5 @@ def health():
         "xrayConfigPath": str(xray.config_path()),
         "publicHost": xray.public_host(),
         "publicPort": xray.public_port(),
+        "subscriptionMode": xray.subscription_mode(),
     }

@@ -182,14 +182,237 @@ def validate_with_xray() -> tuple[bool, str]:
         return False, str(e)
 
 
-def link_label(up: dict[str, Any]) -> str:
-    loc = str(up.get("remark") or up.get("name") or "Location").strip()
+
+def subscription_mode() -> str:
+    # gateway: client receives VLESS links to your VPS, VPS routes through upstreams
+    # direct: client receives a Happ/Xray JSON based on imported upstreams directly
+    # hybrid: /sub returns gateway links, /client/{token}.json returns direct JSON
+    mode = (db.setting("SUBSCRIPTION_MODE", env("SUBSCRIPTION_MODE", "direct")) or "direct").strip().lower()
+    return mode if mode in {"direct", "gateway", "hybrid"} else "direct"
+
+
+def _client_base_config(label: str) -> dict[str, Any]:
+    return {
+        "dns": {
+            "tag": "dns-inbound",
+            "queryStrategy": "UseIPv4",
+            "servers": [
+                "https://8.8.8.8/dns-query",
+                "https://8.8.4.4/dns-query",
+                "https://1.1.1.1/dns-query",
+                "https://1.0.0.1/dns-query",
+            ],
+        },
+        "log": {"loglevel": "warning"},
+        "inbounds": [
+            {
+                "tag": "socks",
+                "listen": "127.0.0.1",
+                "port": 10808,
+                "protocol": "socks",
+                "settings": {"auth": "noauth", "udp": True, "userLevel": 8},
+                "sniffing": {"enabled": True, "routeOnly": True, "destOverride": ["http", "tls", "quic"]},
+            },
+            {
+                "tag": "http",
+                "listen": "127.0.0.1",
+                "port": 10809,
+                "protocol": "http",
+                "settings": {"allowTransparent": False, "userLevel": 8},
+                "sniffing": {"enabled": True, "routeOnly": True, "destOverride": ["http", "tls", "quic"]},
+            },
+        ],
+        "outbounds": [],
+        "policy": {
+            "levels": {"8": {"connIdle": 300, "downlinkOnly": 1, "handshake": 4, "uplinkOnly": 1}},
+            "system": {"statsOutboundDownlink": True, "statsOutboundUplink": True},
+        },
+        "remarks": label,
+        "routing": {
+            "domainMatcher": "hybrid",
+            "domainStrategy": "IPIfNonMatch",
+            "rules": [
+                {"type": "field", "port": 53, "outboundTag": "dns-out"},
+                {"type": "field", "protocol": ["bittorrent"], "outboundTag": "block"},
+                {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
+            ],
+        },
+        "stats": {},
+    }
+
+
+def _clean_location_name(up: dict[str, Any]) -> str:
+    raw = str(up.get("remark") or up.get("name") or "Location").strip()
     prefix = profile_prefix()
-    desc = vpn_description().strip()
-    # Happ usually displays the URL fragment as profile name. Keep it readable and branded.
-    if desc:
-        return f"{prefix} · {loc} — {desc[:70]}"
-    return f"{prefix} · {loc}"
+    brand = brand_name()
+    for lead in (f"{prefix} · ", f"{brand} · "):
+        if raw.startswith(lead):
+            raw = raw[len(lead):].strip()
+    if " — " in raw and len(raw) > 64:
+        raw = raw.split(" — ", 1)[0].strip()
+    return raw or "Location"
+
+
+def subscription_title() -> str:
+    return db.setting("HAPP_SUBSCRIPTION_TITLE", env("HAPP_SUBSCRIPTION_TITLE", f"{brand_name()} VPN")) or f"{brand_name()} VPN"
+
+
+def update_interval_hours() -> int:
+    try:
+        return max(1, int(db.setting("SUB_UPDATE_INTERVAL_HOURS", env("SUB_UPDATE_INTERVAL_HOURS", "1"))))
+    except Exception:
+        return 1
+
+
+def default_traffic_limit_gb() -> int:
+    try:
+        return max(0, int(db.setting("DEFAULT_TRAFFIC_LIMIT_GB", env("DEFAULT_TRAFFIC_LIMIT_GB", "10"))))
+    except Exception:
+        return 10
+
+
+def _location_suffix() -> str:
+    return db.setting("HAPP_LOCATION_SUFFIX", env("HAPP_LOCATION_SUFFIX", "🔥 Новые блокировки")).strip()
+
+
+def _display_location_label(up: dict[str, Any]) -> str:
+    loc = _clean_location_name(up)
+    suffix = _location_suffix()
+    if suffix and suffix not in loc:
+        return f"{loc} ({suffix})"
+    return loc
+
+
+def _direct_label(u: dict[str, Any], ups: list[dict[str, Any]]) -> str:
+    if len(ups) == 1:
+        return _display_location_label(ups[0])
+    return subscription_title()
+
+def _system_outbounds_for_client() -> list[dict[str, Any]]:
+    return [
+        {"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIP"}},
+        {"tag": "block", "protocol": "blackhole", "settings": {"response": {"type": "http"}}},
+        {"tag": "dns-out", "protocol": "dns"},
+    ]
+
+
+def _sanitize_client_routing(data: dict[str, Any], proxy_tags: list[str]) -> dict[str, Any]:
+    # Preserve useful direct/block rules when possible, but avoid invalid/old geosite names that often break clients.
+    routing = data.get("routing") if isinstance(data.get("routing"), dict) else {}
+    clean_rules: list[dict[str, Any]] = []
+    for r in routing.get("rules") or []:
+        if not isinstance(r, dict):
+            continue
+        rule = json.loads(json.dumps(r, ensure_ascii=False))
+        # geosite:TORRENT / geosite:torrent is often missing in geosite.dat; bittorrent protocol rule is safer.
+        domains = rule.get("domain")
+        if isinstance(domains, list) and any(str(x).lower() in {"geosite:torrent", "geosite:torrrent"} for x in domains):
+            continue
+        if rule.get("inboundTag"):
+            continue
+        # If the imported rule points to an old proxy tag, send it to our first proxy/balancer.
+        if rule.get("outboundTag") and str(rule.get("outboundTag")).startswith("proxy"):
+            if len(proxy_tags) == 1:
+                rule["outboundTag"] = proxy_tags[0]
+            else:
+                rule.pop("outboundTag", None)
+                rule["balancerTag"] = "blackwing-balancer"
+        clean_rules.append(rule)
+    base_rules = [
+        {"type": "field", "port": 53, "outboundTag": "dns-out"},
+        {"type": "field", "protocol": ["bittorrent"], "outboundTag": "block"},
+    ]
+    final_rule: dict[str, Any] = {"type": "field", "network": "tcp,udp"}
+    if len(proxy_tags) == 1:
+        final_rule["outboundTag"] = proxy_tags[0]
+    else:
+        final_rule["balancerTag"] = "blackwing-balancer"
+    return {
+        "domainMatcher": routing.get("domainMatcher", "hybrid"),
+        "domainStrategy": routing.get("domainStrategy", "IPIfNonMatch"),
+        "rules": base_rules + clean_rules + [final_rule],
+    }
+
+
+def _prepare_single_direct_config(u: dict[str, Any], up: dict[str, Any]) -> dict[str, Any]:
+    """Return one Happ/Xray JSON profile for one upstream, preserving imported config."""
+    try:
+        original = json.loads(up.get("json_text") or "{}")
+    except Exception:
+        original = {}
+    if not isinstance(original, dict):
+        original = {}
+    cfg = json.loads(json.dumps(original, ensure_ascii=False))
+
+    label = _display_location_label(up)
+    cfg["remarks"] = label
+    cfg["name"] = label
+    cfg.setdefault("log", {"loglevel": "warning"})
+    return cfg
+
+
+def direct_client_configs(u: dict[str, Any]) -> list[dict[str, Any]]:
+    """Happ-style subscription: one JSON profile per location.
+
+    This matches apps that show a subscription header and a list of locations:
+    🇳🇱 Netherlands / 🇫🇮 Finland / 🇩🇪 Germany, each row as `VLESS | JSON` or `HYSTERIA | JSON`.
+    """
+    ups = upstreams_for_user(u)
+    if not ups:
+        return [_client_base_config(f"{subscription_title()} · No locations")]
+    return [_prepare_single_direct_config(u, up) for up in ups]
+
+
+def merged_direct_client_config(u: dict[str, Any]) -> dict[str, Any]:
+    """Old direct mode: merge all upstream outbounds into one client JSON."""
+    ups = upstreams_for_user(u)
+    if not ups:
+        return _client_base_config(f"{profile_prefix()} · No locations")
+    if len(ups) == 1:
+        return _prepare_single_direct_config(u, ups[0])
+
+    cfg = _client_base_config(_direct_label(u, ups))
+    proxy_tags: list[str] = []
+    outbounds: list[dict[str, Any]] = []
+    first_routing_source: dict[str, Any] | None = None
+    n = 0
+    from app.upstreams import proxy_outbounds
+    for up in ups:
+        try:
+            data = json.loads(up["json_text"] or "{}")
+        except Exception:
+            continue
+        if first_routing_source is None:
+            first_routing_source = data
+        for ob in proxy_outbounds(data):
+            n += 1
+            cloned = json.loads(json.dumps(ob, ensure_ascii=False))
+            cloned["tag"] = "proxy" if n == 1 else f"proxy-{n}"
+            outbounds.append(cloned)
+            proxy_tags.append(cloned["tag"])
+    if not proxy_tags:
+        cfg["outbounds"] = _system_outbounds_for_client()
+        return cfg
+    cfg["outbounds"] = outbounds + _system_outbounds_for_client()
+    cfg["routing"] = _sanitize_client_routing(first_routing_source or {}, proxy_tags)
+    if len(proxy_tags) > 1:
+        cfg["routing"]["balancers"] = [{
+            "tag": "blackwing-balancer",
+            "selector": proxy_tags,
+            "fallbackTag": proxy_tags[0],
+            "strategy": {"type": "random"},
+        }]
+    return cfg
+
+
+def direct_client_config(u: dict[str, Any]) -> dict[str, Any]:
+    # Backward-compatible single object for old callers.
+    return merged_direct_client_config(u)
+
+
+def link_label(up: dict[str, Any]) -> str:
+    # For Happ list rows keep labels short like: "🇩🇪 Германия (🔥 Новые блокировки)".
+    return _display_location_label(up)
 
 
 def vless_link_for_location(u: dict[str, Any], up: dict[str, Any]) -> str:

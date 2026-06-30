@@ -153,8 +153,14 @@ def init_db() -> None:
             "BRAND_ICON": "🪽",
             "VPN_DESCRIPTION": "Быстрый приватный VPN с несколькими локациями и автоподпиской для Happ.",
             "HAPP_PROFILE_PREFIX": "BlackWing",
+            "HAPP_SUBSCRIPTION_TITLE": "BlackWing VPN",
+            "HAPP_LOCATION_SUFFIX": "🔥 Новые блокировки",
             "HAPP_DEEPLINK_PATTERN": "happ://add/{url}",
+            "SUB_UPDATE_INTERVAL_HOURS": "1",
+            "DEFAULT_TRAFFIC_LIMIT_GB": "10",
             "AUTO_RESTART_XRAY": "1",
+            "SUBSCRIPTION_MODE": "direct",
+            "DIRECT_OUTPUT_MODE": "array",
         }
         for k, v in defaults.items():
             exists = c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone()

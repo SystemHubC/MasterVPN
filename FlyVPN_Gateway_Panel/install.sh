@@ -8,7 +8,7 @@ DEFAULT_IP="$(curl -4 -fsS https://api.ipify.org 2>/dev/null || hostname -I | aw
 
 say(){ echo -e "$*"; }
 
-say "🪽 BlackWing Gateway Panel v4 installer"
+say "🪽 BlackWing Gateway Panel v6 installer"
 if [[ $EUID -ne 0 ]]; then say "Запусти от root: sudo bash install.sh"; exit 1; fi
 
 apt update
@@ -27,6 +27,12 @@ grep -q '^PANEL_SECRET=' .env && sed -i "s/^PANEL_SECRET=.*/PANEL_SECRET=$SECRET
 grep -q '^PUBLIC_HOST=' .env && sed -i "s/^PUBLIC_HOST=.*/PUBLIC_HOST=${DEFAULT_IP:-127.0.0.1}/" .env || echo "PUBLIC_HOST=${DEFAULT_IP:-127.0.0.1}" >> .env
 grep -q '^BRAND_NAME=' .env || echo 'BRAND_NAME=BlackWing' >> .env
 grep -q '^HAPP_DEEPLINK_PATTERN=' .env || echo 'HAPP_DEEPLINK_PATTERN=happ://add/{url}' >> .env
+grep -q '^HAPP_SUBSCRIPTION_TITLE=' .env || echo 'HAPP_SUBSCRIPTION_TITLE=BlackWing VPN' >> .env
+grep -q '^HAPP_LOCATION_SUFFIX=' .env || echo 'HAPP_LOCATION_SUFFIX=🔥 Новые блокировки' >> .env
+grep -q '^SUB_UPDATE_INTERVAL_HOURS=' .env || echo 'SUB_UPDATE_INTERVAL_HOURS=1' >> .env
+grep -q '^DEFAULT_TRAFFIC_LIMIT_GB=' .env || echo 'DEFAULT_TRAFFIC_LIMIT_GB=10' >> .env
+grep -q '^DIRECT_OUTPUT_MODE=' .env || echo 'DIRECT_OUTPUT_MODE=array' >> .env
+grep -q '^SUBSCRIPTION_MODE=' .env || echo 'SUBSCRIPTION_MODE=direct' >> .env
 
 $PYTHON_BIN -m venv venv
 source venv/bin/activate

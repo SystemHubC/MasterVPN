@@ -23,8 +23,8 @@
       </nav>
       <div class="side-card">
         <div class="pulse"></div>
-        <b>Gateway mode</b>
-        <p>Клиент видит бренд {{ brand_name }} и твой VPS, а Xray уходит через импортированные JSON-upstreams.</p>
+        <b>{{ setting('SUBSCRIPTION_MODE','direct')|upper }} mode</b>
+        <p>Direct отдаёт Happ JSON как в оригинальных конфигах. Gateway отдаёт VLESS на твой VPS и маршрутизирует через upstream.</p>
       </div>
       <a class="logout" href="/logout">⎋ Выйти</a>
     </aside>

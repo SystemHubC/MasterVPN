@@ -1,28 +1,30 @@
 <!doctype html>
 <html lang="ru">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ brand_name }} VPN</title><link rel="stylesheet" href="/static/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ setting('HAPP_SUBSCRIPTION_TITLE','BlackWing VPN') }}</title><link rel="stylesheet" href="/static/style.css"></head>
 <body class="sub-body">
   <div class="orb orb-a"></div><div class="orb orb-b"></div><div class="noise"></div>
   <main class="sub-page">
     <section class="sub-hero-card">
       <div class="brand-mark big">{{ brand_icon }}</div>
-      <span class="eyebrow">Secure subscription</span>
+      <span class="eyebrow">{{ setting('HAPP_SUBSCRIPTION_TITLE','BlackWing VPN') }}</span>
       <h1>{{ brand_name }} VPN</h1>
       <p>{{ vpn_description }}</p>
-      <div class="sub-stats"><div><b>{{ links|length }}</b><span>локаций</span></div><div><b>{{ days_left(public_user) }}</b><span>дней</span></div><div><b>Happ</b><span>auto import</span></div></div>
+      <div class="sub-stats"><div><b>{{ direct_profile_count(public_user) if subscription_mode=='direct' else links|length }}</b><span>локаций</span></div><div><b>{{ days_left(public_user) }}</b><span>дней</span></div><div><b>{{ setting('SUB_UPDATE_INTERVAL_HOURS','1') }}ч</b><span>автообновление</span></div></div>
       <div class="hero-actions center"><a class="primary button-link" href="{{ happ_url }}">Открыть в Happ</a><button data-copy="{{ raw_sub_url }}">Скопировать подписку</button></div>
-      <small>Если приложение не открылось автоматически, нажми кнопку выше или скопируй ссылку подписки вручную.</small>
+      <small>Happ должен добавить подписку как группу с автообновлением, сроком и списком локаций.</small>
     </section>
 
     <section class="panel install-panel">
       <div class="panel-head"><h2>Как установить</h2><span class="pill ghost">1 минута</span></div>
       <div class="steps">
         <div><b>1</b><span>Установи приложение Happ.</span></div>
-        <div><b>2</b><span>Нажми «Открыть в Happ» на этой странице.</span></div>
-        <div><b>3</b><span>Подтверди импорт подписки и выбери нужную локацию.</span></div>
-        <div><b>4</b><span>Включи VPN. Если не сработало — скопируй ссылку ниже и добавь подписку вручную.</span></div>
+        <div><b>2</b><span>Нажми «Открыть в Happ».</span></div>
+        <div><b>3</b><span>Подтверди импорт подписки.</span></div>
+        <div><b>4</b><span>Выбери нужную локацию и включи VPN.</span></div>
       </div>
       <label>Subscription URL<input readonly value="{{ raw_sub_url }}" onclick="this.select()"></label>
+      <p class="muted">Режим: <b>{{ subscription_mode }}</b>. Для красивого списка как на скрине используй Settings → DIRECT_OUTPUT_MODE = array.</p>
+      <div class="hero-actions center"><a class="button-link" href="{{ raw_sub_url }}" target="_blank">JSON subscription</a><a class="button-link" href="{{ gateway_links_url }}" target="_blank">Gateway VLESS links</a><a class="button-link" href="{{ api_sub_url }}" target="_blank">API</a></div>
       <div class="links-list">{% for link in links %}<div class="copybox" data-copy-value="{{ link }}">{{ link }}</div>{% endfor %}</div>
     </section>
   </main>
